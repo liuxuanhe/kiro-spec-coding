@@ -1,0 +1,16 @@
+# Build
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+
+# jqwik
+.jqwik-database
+
+# Logs
+*.log
