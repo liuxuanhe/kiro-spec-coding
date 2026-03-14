@@ -48,6 +48,11 @@ mybatis:
     lazy-loading-enabled: false
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
 
+jwt:
+  secret-key: YTJiM2M0ZDVlNmY3ZzhoOWkwajFrMmwzbTRuNW82cDdxOHI5czB0MXUydjN3
+  access-token-expiration: 7200000
+  refresh-token-expiration: 604800000
+
 logging:
   level:
     root: INFO

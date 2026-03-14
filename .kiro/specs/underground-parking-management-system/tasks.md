@@ -70,7 +70,7 @@
     - _Requirements: 21.3, 20.4, 22.3, 24.1, 16.4, 1.2, 29.1, 30.1_
 
 - [ ] 3. 认证鉴权模块实现
-  - [ ] 3.1 实现 JWT Token 管理
+  - [-] 3.1 实现 JWT Token 管理
     - 创建 JwtTokenService 接口和实现类
     - 实现 generateAccessToken() (有效期2小时，包含 userId, role, communityId, houseNo)
     - 实现 generateRefreshToken() (有效期7天)

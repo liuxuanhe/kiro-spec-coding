@@ -51,6 +51,11 @@ public enum ErrorCode {
     // 20xxx: 高危操作相关
     PARKING_20001(20001, "IP 不在白名单内，无法执行高危操作"),
 
+    // 13xxx: 认证相关
+    PARKING_13001(13001, "Token 已过期"),
+    PARKING_13002(13002, "Token 无效"),
+    PARKING_13003(13003, "Token 已被撤销"),
+
     // 通用错误
     SYSTEM_ERROR(99999, "系统内部错误"),
     PARAM_ERROR(10000, "参数校验失败"),
