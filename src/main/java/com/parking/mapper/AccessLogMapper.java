@@ -25,4 +25,24 @@ public interface AccessLogMapper {
                                        @Param("apiPath") String apiPath,
                                        @Param("startTime") String startTime,
                                        @Param("endTime") String endTime);
+
+    /**
+     * 统计指定日期之前的访问日志数量
+     */
+    int countBeforeDate(@Param("beforeDate") String beforeDate);
+
+    /**
+     * 批量插入到归档表
+     */
+    void insertToArchive(@Param("beforeDate") String beforeDate, @Param("batchSize") int batchSize);
+
+    /**
+     * 删除指定日期之前的访问日志
+     */
+    int deleteBeforeDate(@Param("beforeDate") String beforeDate, @Param("batchSize") int batchSize);
+
+    /**
+     * 统计归档表中指定日期之前的记录数
+     */
+    int countArchiveBeforeDate(@Param("beforeDate") String beforeDate);
 }

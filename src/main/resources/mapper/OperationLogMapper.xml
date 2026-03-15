@@ -39,4 +39,31 @@
         LIMIT 100
     </select>
 
+    <!-- 统计指定日期之前的操作日志数量 -->
+    <select id="countBeforeDate" resultType="int">
+        SELECT COUNT(*) FROM sys_operation_log
+        WHERE operation_time &lt; #{beforeDate}
+    </select>
+
+    <!-- 批量插入到归档表 -->
+    <insert id="insertToArchive">
+        INSERT INTO sys_operation_log_archive
+        SELECT * FROM sys_operation_log
+        WHERE operation_time &lt; #{beforeDate}
+        LIMIT #{batchSize}
+    </insert>
+
+    <!-- 删除指定日期之前的操作日志 -->
+    <delete id="deleteBeforeDate">
+        DELETE FROM sys_operation_log
+        WHERE operation_time &lt; #{beforeDate}
+        LIMIT #{batchSize}
+    </delete>
+
+    <!-- 统计归档表中指定日期之前的记录数 -->
+    <select id="countArchiveBeforeDate" resultType="int">
+        SELECT COUNT(*) FROM sys_operation_log_archive
+        WHERE operation_time &lt; #{beforeDate}
+    </select>
+
 </mapper>
