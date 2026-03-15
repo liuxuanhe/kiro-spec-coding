@@ -40,6 +40,12 @@ const routes = [
         name: 'VisitorAudit',
         component: () => import('@/views/visitor/VisitorAuditView.vue'),
         meta: { requiresAuth: true }
+      },
+      {
+        path: '/parking/config',
+        name: 'ParkingConfig',
+        component: () => import('@/views/parking/ParkingConfigView.vue'),
+        meta: { requiresAuth: true }
       }
     ]
   }

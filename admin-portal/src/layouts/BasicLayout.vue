@@ -43,6 +43,13 @@
             <template #title>Visitor 管理</template>
             <a-menu-item key="/visitors/audit">Visitor 审批</a-menu-item>
           </a-sub-menu>
+
+          <!-- 车位管理 -->
+          <a-sub-menu key="parking">
+            <template #icon><SettingOutlined /></template>
+            <template #title>车位管理</template>
+            <a-menu-item key="/parking/config">车位配置</a-menu-item>
+          </a-sub-menu>
         </a-menu>
       </a-layout-sider>
 
@@ -57,7 +64,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { TeamOutlined, CarOutlined, UserSwitchOutlined } from '@ant-design/icons-vue'
+import { TeamOutlined, CarOutlined, UserSwitchOutlined, SettingOutlined } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
