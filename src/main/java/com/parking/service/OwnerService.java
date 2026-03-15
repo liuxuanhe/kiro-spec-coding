@@ -17,4 +17,15 @@ public interface OwnerService {
      * @return 注册响应
      */
     OwnerRegisterResponse register(OwnerRegisterRequest request);
+
+    /**
+     * 注销业主账号
+     * 仅超级管理员可执行，验证所有车辆均不在场后，禁用账号和所有车牌
+     * Validates: Requirements 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.7, 14.8
+     *
+     * @param ownerId 业主ID
+     * @param reason 注销原因
+     * @param operatorId 操作人ID
+     */
+    void disable(Long ownerId, String reason, Long operatorId);
 }
