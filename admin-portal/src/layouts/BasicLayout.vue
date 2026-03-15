@@ -8,18 +8,69 @@
         退出登录
       </a-button>
     </a-layout-header>
-    <a-layout-content style="padding: 24px">
-      <router-view />
-    </a-layout-content>
+    <a-layout>
+      <!-- 侧边栏菜单 -->
+      <a-layout-sider
+        v-model:collapsed="collapsed"
+        collapsible
+        theme="light"
+        :width="200"
+      >
+        <a-menu
+          v-model:selectedKeys="selectedKeys"
+          v-model:openKeys="openKeys"
+          mode="inline"
+          style="height: 100%; border-right: 0"
+          @click="handleMenuClick"
+        >
+          <!-- 业主管理 -->
+          <a-sub-menu key="owner">
+            <template #icon><TeamOutlined /></template>
+            <template #title>业主管理</template>
+            <a-menu-item key="/owners/audit">业主审核</a-menu-item>
+          </a-sub-menu>
+        </a-menu>
+      </a-layout-sider>
+
+      <!-- 主内容区 -->
+      <a-layout-content style="padding: 24px; background: #fff; margin: 0">
+        <router-view />
+      </a-layout-content>
+    </a-layout>
   </a-layout>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
+import { ref, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { TeamOutlined } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
+
+/** 侧边栏折叠状态 */
+const collapsed = ref(false)
+
+/** 当前选中的菜单项 */
+const selectedKeys = ref([route.path])
+
+/** 当前展开的子菜单 */
+const openKeys = ref(['owner'])
+
+/** 监听路由变化，同步菜单选中状态 */
+watch(
+  () => route.path,
+  (path) => {
+    selectedKeys.value = [path]
+  }
+)
+
+/** 菜单点击跳转 */
+function handleMenuClick({ key }) {
+  router.push(key)
+}
 
 /** 退出登录 */
 function handleLogout() {

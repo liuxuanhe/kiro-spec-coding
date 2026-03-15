@@ -22,6 +22,12 @@ const routes = [
         name: 'Dashboard',
         component: () => import('@/views/login/LoginView.vue'),
         meta: { requiresAuth: true }
+      },
+      {
+        path: '/owners/audit',
+        name: 'OwnerAudit',
+        component: () => import('@/views/owner/OwnerAuditView.vue'),
+        meta: { requiresAuth: true }
       }
     ]
   }
