@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.parking.mapper.CarPlateMapper">
+
+    <!-- 统计指定 Data_Domain 下在场车辆数（简化实现：查询 status 为 normal 或 primary 的活跃车牌） -->
+    <!-- 后续入场模块完善后，改为查询 parking_car_record 分表中 status='entered' 的记录 -->
+    <select id="countEnteredByOwnerHouse" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_car_plate
+        WHERE community_id = #{communityId}
+          AND house_no = #{houseNo}
+          AND status IN ('normal', 'primary')
+          AND is_deleted = 0
+    </select>
+
+    <!-- 批量禁用指定 Data_Domain 下所有车牌 -->
+    <update id="disableByOwnerHouse">
+        UPDATE sys_car_plate
+        SET status = 'disabled', update_time = NOW()
+        WHERE community_id = #{communityId}
+          AND house_no = #{houseNo}
+          AND is_deleted = 0
+    </update>
+
+    <!-- 统计业主在指定 Data_Domain 下的有效车牌数量 -->
+    <select id="countByOwner" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_car_plate
+        WHERE community_id = #{communityId}
+          AND house_no = #{houseNo}
+          AND owner_id = #{ownerId}
+          AND is_deleted = 0
+    </select>
+
+    <!-- 查询车牌在指定小区内是否已被其他业主绑定 -->
+    <select id="countByCarNumberInCommunity" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_car_plate
+        WHERE community_id = #{communityId}
+          AND car_number = #{carNumber}
+          AND owner_id != #{ownerId}
+          AND is_deleted = 0
+    </select>
+
+    <!-- 插入车牌记录 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_car_plate (community_id, house_no, owner_id, car_number,
+                                   car_brand, car_model, car_color, status,
+                                   is_deleted, create_time, update_time)
+        VALUES (#{communityId}, #{houseNo}, #{ownerId}, #{carNumber},
+                #{carBrand}, #{carModel}, #{carColor}, #{status},
+                0, NOW(), NOW())
+    </insert>
+
+</mapper>

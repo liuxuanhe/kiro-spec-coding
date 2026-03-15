@@ -1,0 +1,67 @@
+package com.parking.mapper;
+
+import com.parking.model.CarPlate;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+/**
+ * 车牌 Mapper 接口
+ * Validates: Requirements 3.1, 3.3, 14.2, 14.5
+ */
+@Mapper
+public interface CarPlateMapper {
+
+    /**
+     * 统计指定 Data_Domain 下在场车辆数（简化实现：统计 status 为 normal 或 primary 的车牌数）
+     * 后续入场模块会通过 parking_car_record 分表中 status='entered' 来判断
+     *
+     * @param communityId 小区ID
+     * @param houseNo 房屋号
+     * @return 在场车辆数
+     */
+    int countEnteredByOwnerHouse(@Param("communityId") Long communityId,
+                                 @Param("houseNo") String houseNo);
+
+    /**
+     * 批量禁用指定 Data_Domain 下所有车牌
+     *
+     * @param communityId 小区ID
+     * @param houseNo 房屋号
+     * @return 更新行数
+     */
+    int disableByOwnerHouse(@Param("communityId") Long communityId,
+                            @Param("houseNo") String houseNo);
+
+    /**
+     * 统计业主在指定 Data_Domain 下的有效车牌数量
+     * Validates: Requirements 3.1, 3.5
+     *
+     * @param communityId 小区ID
+     * @param houseNo 房屋号
+     * @param ownerId 业主ID
+     * @return 有效车牌数量
+     */
+    int countByOwner(@Param("communityId") Long communityId,
+                     @Param("houseNo") String houseNo,
+                     @Param("ownerId") Long ownerId);
+
+    /**
+     * 查询车牌在指定小区内是否已被其他业主绑定
+     * Validates: Requirements 3.3
+     *
+     * @param communityId 小区ID
+     * @param carNumber 车牌号
+     * @param ownerId 当前业主ID（排除自身）
+     * @return 绑定数量，大于0表示已被其他业主绑定
+     */
+    int countByCarNumberInCommunity(@Param("communityId") Long communityId,
+                                    @Param("carNumber") String carNumber,
+                                    @Param("ownerId") Long ownerId);
+
+    /**
+     * 插入车牌记录
+     *
+     * @param carPlate 车牌实体
+     */
+    void insert(CarPlate carPlate);
+}
