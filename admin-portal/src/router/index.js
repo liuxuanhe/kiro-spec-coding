@@ -28,6 +28,12 @@ const routes = [
         name: 'OwnerAudit',
         component: () => import('@/views/owner/OwnerAuditView.vue'),
         meta: { requiresAuth: true }
+      },
+      {
+        path: '/vehicles',
+        name: 'VehicleList',
+        component: () => import('@/views/vehicle/VehicleListView.vue'),
+        meta: { requiresAuth: true }
       }
     ]
   }
