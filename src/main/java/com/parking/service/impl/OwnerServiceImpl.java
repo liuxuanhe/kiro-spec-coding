@@ -4,6 +4,7 @@ import com.parking.common.BusinessException;
 import com.parking.common.ErrorCode;
 import com.parking.dto.OwnerRegisterRequest;
 import com.parking.dto.OwnerRegisterResponse;
+import com.parking.mapper.CarPlateMapper;
 import com.parking.mapper.HouseMapper;
 import com.parking.mapper.OwnerHouseRelMapper;
 import com.parking.mapper.OwnerMapper;
@@ -29,15 +30,18 @@ public class OwnerServiceImpl implements OwnerService {
     private final OwnerHouseRelMapper ownerHouseRelMapper;
     private final HouseMapper houseMapper;
     private final VerificationCodeService verificationCodeService;
+    private final CarPlateMapper carPlateMapper;
 
     public OwnerServiceImpl(OwnerMapper ownerMapper,
                             OwnerHouseRelMapper ownerHouseRelMapper,
                             HouseMapper houseMapper,
-                            VerificationCodeService verificationCodeService) {
+                            VerificationCodeService verificationCodeService,
+                            CarPlateMapper carPlateMapper) {
         this.ownerMapper = ownerMapper;
         this.ownerHouseRelMapper = ownerHouseRelMapper;
         this.houseMapper = houseMapper;
         this.verificationCodeService = verificationCodeService;
+        this.carPlateMapper = carPlateMapper;
     }
 
     @Override
@@ -87,5 +91,37 @@ public class OwnerServiceImpl implements OwnerService {
         response.setStatus(owner.getStatus());
         response.setCreateTime(owner.getCreateTime());
         return response;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void disable(Long ownerId, String reason, Long operatorId) {
+        // 1. 查询业主信息
+        Owner owner = ownerMapper.selectById(ownerId);
+        if (owner == null) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR.getCode(), "业主不存在");
+        }
+
+        // 2. 验证业主账号状态为 active
+        if (!"active".equals(owner.getAccountStatus())) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR.getCode(), "业主账号已被禁用");
+        }
+
+        // 3. 检查是否有车辆在场（Requirements 14.2, 14.3）
+        int enteredCount = carPlateMapper.countEnteredByOwnerHouse(
+                owner.getCommunityId(), owner.getHouseNo());
+        if (enteredCount > 0) {
+            throw new BusinessException(ErrorCode.PARKING_14001);
+        }
+
+        // 4. 更新业主账号状态为 disabled（Requirements 14.4）
+        ownerMapper.updateAccountStatus(ownerId, "disabled");
+
+        // 5. 批量禁用所有车牌（Requirements 14.5）
+        carPlateMapper.disableByOwnerHouse(owner.getCommunityId(), owner.getHouseNo());
+
+        // 6. 记录操作日志预留（Requirements 14.6）
+        log.info("业主账号注销: ownerId={}, communityId={}, houseNo={}, reason={}, operatorId={}",
+                ownerId, owner.getCommunityId(), owner.getHouseNo(), reason, operatorId);
     }
 }

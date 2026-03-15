@@ -3,6 +3,7 @@ package com.parking.service;
 import com.parking.common.BusinessException;
 import com.parking.dto.OwnerRegisterRequest;
 import com.parking.dto.OwnerRegisterResponse;
+import com.parking.mapper.CarPlateMapper;
 import com.parking.mapper.HouseMapper;
 import com.parking.mapper.OwnerHouseRelMapper;
 import com.parking.mapper.OwnerMapper;
@@ -42,6 +43,9 @@ class OwnerServiceTest {
     @Mock
     private VerificationCodeService verificationCodeService;
 
+    @Mock
+    private CarPlateMapper carPlateMapper;
+
     private OwnerServiceImpl ownerService;
 
     private static final Long COMMUNITY_ID = 1001L;
@@ -53,7 +57,7 @@ class OwnerServiceTest {
     @BeforeEach
     void setUp() {
         ownerService = new OwnerServiceImpl(ownerMapper, ownerHouseRelMapper,
-                houseMapper, verificationCodeService);
+                houseMapper, verificationCodeService, carPlateMapper);
     }
 
     private OwnerRegisterRequest createValidRequest() {
