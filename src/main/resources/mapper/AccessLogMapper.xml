@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.parking.mapper.AccessLogMapper">
+
+    <insert id="insert" parameterType="com.parking.model.AccessLog" useGeneratedKeys="true" keyProperty="log.id">
+        INSERT INTO sys_access_log (request_id, community_id, user_id, user_name,
+                                     user_role, user_ip, access_time, api_path, http_method,
+                                     query_params, request_body, response_code, response_time,
+                                     user_agent, create_time)
+        VALUES (#{log.requestId}, #{log.communityId}, #{log.userId}, #{log.userName},
+                #{log.userRole}, #{log.userIp}, #{log.accessTime}, #{log.apiPath}, #{log.httpMethod},
+                #{log.queryParams}, #{log.requestBody}, #{log.responseCode}, #{log.responseTime},
+                #{log.userAgent}, NOW())
+    </insert>
+
+    <select id="selectByCondition" resultType="com.parking.model.AccessLog">
+        SELECT id, request_id, community_id, user_id, user_name, user_role,
+               user_ip, access_time, api_path, http_method, query_params,
+               request_body, response_code, response_time, user_agent, create_time
+        FROM sys_access_log
+        WHERE 1=1
+        <if test="communityId != null">
+            AND community_id = #{communityId}
+        </if>
+        <if test="userId != null">
+            AND user_id = #{userId}
+        </if>
+        <if test="apiPath != null and apiPath != ''">
+            AND api_path LIKE CONCAT('%', #{apiPath}, '%')
+        </if>
+        <if test="startTime != null and startTime != ''">
+            AND access_time &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != ''">
+            AND access_time &lt;= #{endTime}
+        </if>
+        ORDER BY access_time DESC
+        LIMIT 100
+    </select>
+
+</mapper>

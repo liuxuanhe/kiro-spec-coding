@@ -1,0 +1,28 @@
+package com.parking.mapper;
+
+import com.parking.model.AccessLog;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
+
+/**
+ * 访问日志 Mapper 接口
+ */
+@Mapper
+public interface AccessLogMapper {
+
+    /**
+     * 插入访问日志
+     */
+    void insert(@Param("log") AccessLog log);
+
+    /**
+     * 按条件查询访问日志
+     */
+    List<AccessLog> selectByCondition(@Param("communityId") Long communityId,
+                                       @Param("userId") Long userId,
+                                       @Param("apiPath") String apiPath,
+                                       @Param("startTime") String startTime,
+                                       @Param("endTime") String endTime);
+}

@@ -1,6 +1,7 @@
 package com.parking.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.parking.interceptor.AccessLogInterceptor;
 import com.parking.interceptor.AuthenticationInterceptor;
 import com.parking.interceptor.RequestIdInterceptor;
 import com.parking.service.AntiReplayService;
@@ -31,15 +32,18 @@ public class WebConfig implements WebMvcConfigurer {
     private final SignatureService signatureService;
     private final AntiReplayService antiReplayService;
     private final ObjectMapper objectMapper;
+    private final AccessLogInterceptor accessLogInterceptor;
 
     public WebConfig(JwtTokenService jwtTokenService,
                      SignatureService signatureService,
                      AntiReplayService antiReplayService,
-                     ObjectMapper objectMapper) {
+                     ObjectMapper objectMapper,
+                     AccessLogInterceptor accessLogInterceptor) {
         this.jwtTokenService = jwtTokenService;
         this.signatureService = signatureService;
         this.antiReplayService = antiReplayService;
         this.objectMapper = objectMapper;
+        this.accessLogInterceptor = accessLogInterceptor;
     }
 
     @Override
@@ -55,5 +59,10 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(EXCLUDE_PATHS)
                 .order(1);
+
+        // AccessLogInterceptor 最后执行，记录所有接口访问日志
+        registry.addInterceptor(accessLogInterceptor)
+                .addPathPatterns("/api/**")
+                .order(2);
     }
 }
