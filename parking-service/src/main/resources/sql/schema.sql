@@ -2,9 +2,9 @@
 -- 地下停车场管理系统 - 数据库表结构
 -- ============================================================
 
--- 使用数据库
-CREATE DATABASE IF NOT EXISTS parking_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE parking_db;
+-- 注意：数据库由 Docker 的 MYSQL_DATABASE 环境变量自动创建，
+-- 此脚本通过 docker-entrypoint-initdb.d 在该数据库上下文中执行，
+-- 无需 CREATE DATABASE 或 USE 语句。
 
 -- ============================================================
 -- 2.1 核心业务表
@@ -200,35 +200,6 @@ ALTER TABLE parking_car_record_202605 COMMENT='入场记录表-2026年5月';
 CREATE TABLE IF NOT EXISTS parking_car_record_202606 LIKE parking_car_record_template;
 ALTER TABLE parking_car_record_202606 COMMENT='入场记录表-2026年6月';
 
--- 自动创建分表的存储过程
-DELIMITER $
-CREATE PROCEDURE IF NOT EXISTS create_parking_record_tables()
-BEGIN
-    DECLARE i INT DEFAULT 1;
-    DECLARE table_name VARCHAR(50);
-    DECLARE table_month VARCHAR(6);
-    DECLARE table_comment VARCHAR(100);
-
-    WHILE i <= 3 DO
-        SET table_month = DATE_FORMAT(DATE_ADD(NOW(), INTERVAL i MONTH), '%Y%m');
-        SET table_name = CONCAT('parking_car_record_', table_month);
-        SET table_comment = CONCAT('入场记录表-', DATE_FORMAT(DATE_ADD(NOW(), INTERVAL i MONTH), '%Y年%m月'));
-
-        SET @create_sql = CONCAT('CREATE TABLE IF NOT EXISTS ', table_name, ' LIKE parking_car_record_template');
-        PREPARE stmt FROM @create_sql;
-        EXECUTE stmt;
-        DEALLOCATE PREPARE stmt;
-
-        SET @comment_sql = CONCAT('ALTER TABLE ', table_name, ' COMMENT=''', table_comment, '''');
-        PREPARE stmt FROM @comment_sql;
-        EXECUTE stmt;
-        DEALLOCATE PREPARE stmt;
-
-        SET i = i + 1;
-    END WHILE;
-END$
-DELIMITER ;
-
 -- ============================================================
 -- 2.3 Visitor 相关表
 -- ============================================================
@@ -304,7 +275,7 @@ CREATE TABLE IF NOT EXISTS visitor_session (
 
 -- 操作日志表（按月分区）
 CREATE TABLE IF NOT EXISTS sys_operation_log (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '日志ID',
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '日志ID',
     request_id VARCHAR(100) NOT NULL COMMENT '请求唯一标识',
     community_id BIGINT NOT NULL COMMENT '小区ID',
     operator_id BIGINT NOT NULL COMMENT '操作人ID',
@@ -325,7 +296,8 @@ CREATE TABLE IF NOT EXISTS sys_operation_log (
     INDEX idx_operator_id (operator_id),
     INDEX idx_operation_type (operation_type),
     INDEX idx_operation_time (operation_time),
-    INDEX idx_target (target_type, target_id)
+    INDEX idx_target (target_type, target_id),
+    PRIMARY KEY (id, operation_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作日志表'
 PARTITION BY RANGE (TO_DAYS(operation_time)) (
     PARTITION p202601 VALUES LESS THAN (TO_DAYS('2026-02-01')),
@@ -345,7 +317,7 @@ PARTITION BY RANGE (TO_DAYS(operation_time)) (
 
 -- 访问日志表（按月分区）
 CREATE TABLE IF NOT EXISTS sys_access_log (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '日志ID',
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '日志ID',
     request_id VARCHAR(100) NOT NULL COMMENT '请求唯一标识',
     community_id BIGINT COMMENT '小区ID',
     user_id BIGINT COMMENT '访问人ID',
@@ -366,7 +338,8 @@ CREATE TABLE IF NOT EXISTS sys_access_log (
     INDEX idx_user_id (user_id),
     INDEX idx_access_time (access_time),
     INDEX idx_api_path (api_path),
-    INDEX idx_response_time (response_time)
+    INDEX idx_response_time (response_time),
+    PRIMARY KEY (id, access_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='访问日志表'
 PARTITION BY RANGE (TO_DAYS(access_time)) (
     PARTITION p202601 VALUES LESS THAN (TO_DAYS('2026-02-01')),
