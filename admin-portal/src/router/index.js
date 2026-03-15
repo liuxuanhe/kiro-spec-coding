@@ -83,9 +83,12 @@ router.beforeEach((to, from, next) => {
 
   if (to.meta.requiresAuth !== false && !authStore.isLoggedIn) {
     next({ path: '/login', query: { redirect: to.fullPath } })
-  } else if (to.path === '/login' && authStore.isLoggedIn) {
-    // 已登录用户访问登录页，重定向到首页
+  } else if (to.path === '/login' && authStore.isLoggedIn && !authStore.mustChangePassword) {
+    // 已登录用户访问登录页，且不需要修改密码时，重定向到首页
     next({ path: '/' })
+  } else if (to.meta.requiresAuth !== false && authStore.isLoggedIn && authStore.mustChangePassword) {
+    // 需要修改密码的用户访问其他页面时，重定向回登录页
+    next({ path: '/login' })
   } else {
     next()
   }

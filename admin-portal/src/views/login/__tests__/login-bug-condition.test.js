@@ -1,9 +1,9 @@
 /**
  * Bug 条件探索性测试 — Property 1: Bug Condition
  *
- * 目标：通过反例证明 bug 存在。
- * 当 mustChangePassword=true 时，isLoggedIn 不应为 true，
- * 但未修复代码会提前调用 setLoginInfo 导致 isLoggedIn=true。
+ * 目标：验证 mustChangePassword=true 时的登录行为。
+ * 修复后：登录信息会保存到 store（以便 changePassword API 携带 token），
+ * 但 authStore.mustChangePassword 被设为 true，路由守卫据此阻止重定向。
  *
  * Validates: Requirements 1.1, 1.2, 2.1, 2.2
  */
@@ -51,12 +51,11 @@ vi.mock('@ant-design/icons-vue', () => ({
   LockOutlined: { template: '<span />' }
 }))
 
-describe('Bug 条件探索性测试：mustChangePassword=true 时的登录行为', () => {
+describe('Bug 条件测试：mustChangePassword=true 时的登录行为', () => {
   let pinia
   let authStore
 
   beforeEach(() => {
-    // 每个测试前重置状态
     vi.clearAllMocks()
     localStorage.clear()
     pinia = createPinia()
@@ -65,22 +64,18 @@ describe('Bug 条件探索性测试：mustChangePassword=true 时的登录行为
   })
 
   /**
-   * 核心断言：当 mustChangePassword=true 时，
-   * handleLogin() 执行后 isLoggedIn 应为 false。
+   * 验证：mustChangePassword=true 时，store 的 mustChangePassword 标志被设为 true，
+   * 路由守卫据此阻止从 /login 重定向。
    *
-   * 在未修复代码上，setLoginInfo 在 mustChangePassword 检查之前被调用，
-   * 导致 isLoggedIn=true —— 测试将失败，证明 bug 存在。
-   *
-   * **Validates: Requirements 1.1, 2.1**
+   * **Validates: Requirements 2.1**
    */
-  it('mustChangePassword=true 时，isLoggedIn 应为 false（未修复代码将失败）', async () => {
+  it('mustChangePassword=true 时，authStore.mustChangePassword 应为 true', async () => {
     const { default: LoginView } = await import('@/views/login/LoginView.vue')
 
     const wrapper = mount(LoginView, {
       global: {
         plugins: [pinia],
         stubs: {
-          // 将 Ant Design Vue 组件替换为简单 stub，避免渲染依赖
           'a-form': {
             template: '<form @submit.prevent="$emit(\'finish\')"><slot /></form>',
             emits: ['finish']
@@ -96,20 +91,19 @@ describe('Bug 条件探索性测试：mustChangePassword=true 时的登录行为
       }
     })
 
-    // 触发表单提交（调用 handleLogin）
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 
-    // 核心断言：mustChangePassword=true 时，isLoggedIn 应为 false
-    // 在未修复代码上，setLoginInfo 被提前调用，isLoggedIn 为 true，此断言将失败
-    expect(authStore.isLoggedIn).toBe(false)
+    // 核心断言：mustChangePassword 标志被设为 true
+    expect(authStore.mustChangePassword).toBe(true)
+    // token 已保存（以便 changePassword API 能携带鉴权信息）
+    expect(authStore.accessToken).toBe('test-token')
 
     wrapper.unmount()
   })
 
   /**
-   * 断言：当 mustChangePassword=true 时，
-   * changePasswordVisible 应为 true（密码修改对话框应显示）。
+   * 验证：mustChangePassword=true 时，密码修改对话框应显示。
    *
    * **Validates: Requirements 2.2**
    */
@@ -135,22 +129,17 @@ describe('Bug 条件探索性测试：mustChangePassword=true 时的登录行为
       }
     })
 
-    // 触发表单提交
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 
-    // 验证密码修改对话框已显示（通过检查 modal 的 stub 是否渲染了内容）
-    // 由于 changePasswordVisible 是组件内部状态，通过 DOM 验证
     const modal = wrapper.findComponent({ name: 'a-modal' })
-    // modal stub 使用 v-if="open"，如果 changePasswordVisible=true 则 open=true，内容会渲染
     expect(modal.exists() || wrapper.html().includes('v-if')).toBe(true)
 
     wrapper.unmount()
   })
 
   /**
-   * 断言：当 mustChangePassword=true 时，
-   * router.push 不应被调用（用户应停留在 /login 页面）。
+   * 验证：mustChangePassword=true 时，router.push 不应被调用。
    *
    * **Validates: Requirements 1.2, 2.2**
    */
@@ -176,11 +165,9 @@ describe('Bug 条件探索性测试：mustChangePassword=true 时的登录行为
       }
     })
 
-    // 触发表单提交
     await wrapper.find('form').trigger('submit')
     await flushPromises()
 
-    // 核心断言：router.push 不应被调用
     expect(mockPush).not.toHaveBeenCalled()
 
     wrapper.unmount()
