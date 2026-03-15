@@ -19,7 +19,7 @@ services:
       TZ: Asia/Shanghai
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./src/main/resources/sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./parking-service/src/main/resources/sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     command: >
       --default-authentication-plugin=mysql_native_password
       --character-set-server=utf8mb4
@@ -51,7 +51,7 @@ services:
   # 后端应用
   parking-api:
     build:
-      context: .
+      context: ./parking-service
       dockerfile: Dockerfile
     container_name: parking-api
     restart: unless-stopped
