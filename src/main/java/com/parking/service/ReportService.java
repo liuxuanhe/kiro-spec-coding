@@ -1,6 +1,7 @@
 package com.parking.service;
 
 import com.parking.dto.EntryTrendResponse;
+import com.parking.dto.SpaceUsageResponse;
 
 import java.time.LocalDate;
 
@@ -20,4 +21,15 @@ public interface ReportService {
      * @return 入场趋势数据
      */
     EntryTrendResponse getEntryTrend(Long communityId, LocalDate startDate, LocalDate endDate);
+
+    /**
+     * 查询车位使用率报表
+     * 车位使用率 = (入场数 - 出场数) / total_spaces 的日均估算
+     *
+     * @param communityId 小区ID
+     * @param startDate   开始日期
+     * @param endDate     结束日期
+     * @return 车位使用率数据
+     */
+    SpaceUsageResponse getSpaceUsage(Long communityId, LocalDate startDate, LocalDate endDate);
 }

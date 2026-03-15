@@ -1,7 +1,10 @@
 package com.parking.service;
 
 import com.parking.dto.EntryTrendResponse;
+import com.parking.dto.SpaceUsageResponse;
+import com.parking.mapper.ParkingConfigMapper;
 import com.parking.mapper.ParkingStatDailyMapper;
+import com.parking.model.ParkingConfig;
 import com.parking.model.ParkingStatDaily;
 import com.parking.service.impl.ReportServiceImpl;
 import org.junit.jupiter.api.DisplayName;
@@ -28,6 +31,9 @@ class ReportServiceTest {
 
     @Mock
     private ParkingStatDailyMapper parkingStatDailyMapper;
+
+    @Mock
+    private ParkingConfigMapper parkingConfigMapper;
 
     @Mock
     private CacheService cacheService;
@@ -122,6 +128,118 @@ class ReportServiceTest {
         stat.setTotalExitCount(exit);
         stat.setPrimaryEntryCount(primary);
         stat.setVisitorEntryCount(visitor);
+        return stat;
+    }
+
+    // ========== getSpaceUsage 测试 ==========
+
+    @Test
+    @DisplayName("车位使用率 - 缓存命中直接返回")
+    void getSpaceUsage_cacheHit() {
+        SpaceUsageResponse cached = new SpaceUsageResponse();
+        cached.setTotalSpaces(100);
+        when(cacheService.get(anyString())).thenReturn(Optional.of(cached));
+
+        SpaceUsageResponse result = reportService.getSpaceUsage(COMMUNITY_ID, START_DATE, END_DATE);
+
+        assertSame(cached, result);
+        verify(parkingConfigMapper, never()).selectByCommunityId(any());
+        verify(parkingStatDailyMapper, never()).selectByDateRange(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("车位使用率 - 缓存未命中正常计算")
+    void getSpaceUsage_cacheMiss() {
+        when(cacheService.get(anyString())).thenReturn(Optional.empty());
+
+        ParkingConfig config = new ParkingConfig();
+        config.setTotalSpaces(200);
+        when(parkingConfigMapper.selectByCommunityId(COMMUNITY_ID)).thenReturn(config);
+
+        ParkingStatDaily stat1 = buildStatWithDuration(LocalDate.of(2026, 1, 1), 100, 80, 120);
+        ParkingStatDaily stat2 = buildStatWithDuration(LocalDate.of(2026, 1, 2), 150, 140, 90);
+        when(parkingStatDailyMapper.selectByDateRange(COMMUNITY_ID, START_DATE, END_DATE))
+                .thenReturn(List.of(stat1, stat2));
+
+        SpaceUsageResponse result = reportService.getSpaceUsage(COMMUNITY_ID, START_DATE, END_DATE);
+
+        assertNotNull(result);
+        assertEquals(200, result.getTotalSpaces());
+        assertEquals(2, result.getItems().size());
+
+        // stat1: avg = (100+80)/2 = 90, rate = 90/200*100 = 45.0
+        SpaceUsageResponse.UsageItem item1 = result.getItems().get(0);
+        assertEquals(100, item1.getTotalEntryCount());
+        assertEquals(80, item1.getTotalExitCount());
+        assertEquals(120, item1.getAvgParkingDuration());
+        assertEquals(45.0, item1.getUsageRate(), 0.01);
+
+        // stat2: avg = (150+140)/2 = 145, rate = 145/200*100 = 72.5
+        SpaceUsageResponse.UsageItem item2 = result.getItems().get(1);
+        assertEquals(72.5, item2.getUsageRate(), 0.01);
+
+        verify(cacheService).set(anyString(), eq(result), eq(1L), any());
+    }
+
+    @Test
+    @DisplayName("车位使用率 - totalSpaces 为 0 时使用率为 0")
+    void getSpaceUsage_zeroTotalSpaces() {
+        when(cacheService.get(anyString())).thenReturn(Optional.empty());
+
+        ParkingConfig config = new ParkingConfig();
+        config.setTotalSpaces(0);
+        when(parkingConfigMapper.selectByCommunityId(COMMUNITY_ID)).thenReturn(config);
+
+        ParkingStatDaily stat = buildStatWithDuration(LocalDate.of(2026, 1, 1), 50, 40, 60);
+        when(parkingStatDailyMapper.selectByDateRange(COMMUNITY_ID, START_DATE, END_DATE))
+                .thenReturn(List.of(stat));
+
+        SpaceUsageResponse result = reportService.getSpaceUsage(COMMUNITY_ID, START_DATE, END_DATE);
+
+        assertEquals(0, result.getTotalSpaces());
+        assertEquals(0.0, result.getItems().get(0).getUsageRate(), 0.01);
+    }
+
+    @Test
+    @DisplayName("车位使用率 - config 为 null 时 totalSpaces 默认 0")
+    void getSpaceUsage_nullConfig() {
+        when(cacheService.get(anyString())).thenReturn(Optional.empty());
+        when(parkingConfigMapper.selectByCommunityId(COMMUNITY_ID)).thenReturn(null);
+        when(parkingStatDailyMapper.selectByDateRange(COMMUNITY_ID, START_DATE, END_DATE))
+                .thenReturn(List.of(buildStatWithDuration(LocalDate.of(2026, 1, 1), 30, 20, 45)));
+
+        SpaceUsageResponse result = reportService.getSpaceUsage(COMMUNITY_ID, START_DATE, END_DATE);
+
+        assertEquals(0, result.getTotalSpaces());
+        assertEquals(0.0, result.getItems().get(0).getUsageRate(), 0.01);
+    }
+
+    @Test
+    @DisplayName("车位使用率 - 使用率上限为 100%")
+    void getSpaceUsage_rateCapAt100() {
+        when(cacheService.get(anyString())).thenReturn(Optional.empty());
+
+        ParkingConfig config = new ParkingConfig();
+        config.setTotalSpaces(10);
+        when(parkingConfigMapper.selectByCommunityId(COMMUNITY_ID)).thenReturn(config);
+
+        // avg = (500+400)/2 = 450, rate = 450/10*100 = 4500 → 应被截断为 100
+        ParkingStatDaily stat = buildStatWithDuration(LocalDate.of(2026, 1, 1), 500, 400, 60);
+        when(parkingStatDailyMapper.selectByDateRange(COMMUNITY_ID, START_DATE, END_DATE))
+                .thenReturn(List.of(stat));
+
+        SpaceUsageResponse result = reportService.getSpaceUsage(COMMUNITY_ID, START_DATE, END_DATE);
+
+        assertEquals(100.0, result.getItems().get(0).getUsageRate(), 0.01);
+    }
+
+    private ParkingStatDaily buildStatWithDuration(LocalDate date, int entry, int exit, int avgDuration) {
+        ParkingStatDaily stat = new ParkingStatDaily();
+        stat.setCommunityId(COMMUNITY_ID);
+        stat.setStatDate(date);
+        stat.setTotalEntryCount(entry);
+        stat.setTotalExitCount(exit);
+        stat.setAvgParkingDuration(avgDuration);
         return stat;
     }
 }

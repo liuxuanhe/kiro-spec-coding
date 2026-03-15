@@ -3,6 +3,7 @@ package com.parking.controller;
 import com.parking.common.ApiResponse;
 import com.parking.common.RequestContext;
 import com.parking.dto.EntryTrendResponse;
+import com.parking.dto.SpaceUsageResponse;
 import com.parking.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +44,25 @@ public class ReportController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         log.info("查询入场趋势报表: communityId={}, {} ~ {}", communityId, startDate, endDate);
         EntryTrendResponse response = reportService.getEntryTrend(communityId, startDate, endDate);
+        return ApiResponse.success(response, RequestContext.getRequestId());
+    }
+
+    /**
+     * 查询车位使用率报表
+     * GET /api/v1/reports/space-usage?communityId={}&startDate={}&endDate={}
+     *
+     * @param communityId 小区ID
+     * @param startDate   开始日期
+     * @param endDate     结束日期
+     * @return 车位使用率数据
+     */
+    @GetMapping("/space-usage")
+    public ApiResponse<SpaceUsageResponse> getSpaceUsage(
+            @RequestParam Long communityId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        log.info("查询车位使用率报表: communityId={}, {} ~ {}", communityId, startDate, endDate);
+        SpaceUsageResponse response = reportService.getSpaceUsage(communityId, startDate, endDate);
         return ApiResponse.success(response, RequestContext.getRequestId());
     }
 }

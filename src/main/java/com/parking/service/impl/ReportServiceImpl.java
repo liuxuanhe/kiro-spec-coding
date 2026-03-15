@@ -1,7 +1,10 @@
 package com.parking.service.impl;
 
 import com.parking.dto.EntryTrendResponse;
+import com.parking.dto.SpaceUsageResponse;
+import com.parking.mapper.ParkingConfigMapper;
 import com.parking.mapper.ParkingStatDailyMapper;
+import com.parking.model.ParkingConfig;
 import com.parking.model.ParkingStatDaily;
 import com.parking.service.CacheService;
 import com.parking.service.ReportService;
@@ -26,6 +29,7 @@ import java.util.stream.Collectors;
 public class ReportServiceImpl implements ReportService {
 
     private final ParkingStatDailyMapper parkingStatDailyMapper;
+    private final ParkingConfigMapper parkingConfigMapper;
     private final CacheService cacheService;
 
     /** 报表缓存过期时间：1小时 */
@@ -78,5 +82,65 @@ public class ReportServiceImpl implements ReportService {
      */
     private String buildCacheKey(Long communityId, LocalDate startDate, LocalDate endDate) {
         return "report:entry_trend:" + communityId + ":" + startDate + ":" + endDate;
+    }
+
+    @Override
+    public SpaceUsageResponse getSpaceUsage(Long communityId, LocalDate startDate, LocalDate endDate) {
+        // 1. 尝试从缓存获取
+        String cacheKey = "report:space_usage:" + communityId + ":" + startDate + ":" + endDate;
+        Optional<Object> cached = cacheService.get(cacheKey);
+        if (cached.isPresent() && cached.get() instanceof SpaceUsageResponse) {
+            log.debug("车位使用率报表命中缓存: communityId={}", communityId);
+            return (SpaceUsageResponse) cached.get();
+        }
+
+        // 2. 查询总车位数
+        ParkingConfig config = parkingConfigMapper.selectByCommunityId(communityId);
+        int totalSpaces = (config != null && config.getTotalSpaces() != null) ? config.getTotalSpaces() : 0;
+
+        // 3. 从预聚合表查询
+        List<ParkingStatDaily> dailyStats = parkingStatDailyMapper.selectByDateRange(
+                communityId, startDate, endDate);
+
+        // 4. 转换为响应 DTO
+        SpaceUsageResponse response = new SpaceUsageResponse();
+        response.setTotalSpaces(totalSpaces);
+        List<SpaceUsageResponse.UsageItem> items = dailyStats.stream()
+                .map(stat -> toUsageItem(stat, totalSpaces))
+                .collect(Collectors.toList());
+        response.setItems(items);
+
+        // 5. 写入缓存
+        cacheService.set(cacheKey, response, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
+
+        log.info("车位使用率报表查询完成: communityId={}, 日期范围={} ~ {}, 数据条数={}",
+                communityId, startDate, endDate, items.size());
+        return response;
+    }
+
+    /**
+     * 将预聚合实体转换为使用率项
+     * 使用率估算：(入场数 + 出场数) / 2 / total_spaces * 100
+     */
+    private SpaceUsageResponse.UsageItem toUsageItem(ParkingStatDaily stat, int totalSpaces) {
+        SpaceUsageResponse.UsageItem item = new SpaceUsageResponse.UsageItem();
+        item.setDate(stat.getStatDate());
+        int entry = stat.getTotalEntryCount() != null ? stat.getTotalEntryCount() : 0;
+        int exit = stat.getTotalExitCount() != null ? stat.getTotalExitCount() : 0;
+        int avgDuration = stat.getAvgParkingDuration() != null ? stat.getAvgParkingDuration() : 0;
+        item.setTotalEntryCount(entry);
+        item.setTotalExitCount(exit);
+        item.setAvgParkingDuration(avgDuration);
+
+        // 使用率：平均在场车辆数 / 总车位数
+        // 平均在场车辆数近似为 (入场数 + 出场数) / 2
+        if (totalSpaces > 0) {
+            double avgInPark = (entry + exit) / 2.0;
+            double rate = Math.min(avgInPark / totalSpaces * 100, 100.0);
+            item.setUsageRate(Math.round(rate * 100.0) / 100.0);
+        } else {
+            item.setUsageRate(0.0);
+        }
+        return item;
     }
 }
