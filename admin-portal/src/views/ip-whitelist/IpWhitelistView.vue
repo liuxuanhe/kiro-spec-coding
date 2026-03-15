@@ -30,7 +30,7 @@
 
     <!-- 添加 IP 对话框 -->
     <a-modal
-      v-model:open="addModalVisible"
+      v-model:visible="addModalVisible"
       title="添加 IP 白名单"
       @ok="handleAddConfirm"
       :confirmLoading="addLoading"

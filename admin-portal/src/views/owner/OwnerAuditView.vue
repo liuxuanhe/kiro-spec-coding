@@ -86,7 +86,7 @@
 
     <!-- 驳回原因对话框 -->
     <a-modal
-      v-model:open="rejectModalVisible"
+      v-model:visible="rejectModalVisible"
       title="驳回业主申请"
       @ok="handleRejectConfirm"
       :confirmLoading="rejectLoading"
@@ -107,7 +107,7 @@
 
     <!-- 批量驳回原因对话框 -->
     <a-modal
-      v-model:open="batchRejectModalVisible"
+      v-model:visible="batchRejectModalVisible"
       title="批量驳回业主申请"
       @ok="handleBatchRejectConfirm"
       :confirmLoading="batchRejectLoading"
@@ -128,7 +128,7 @@
 
     <!-- 注销业主对话框（Super_Admin 专属） -->
     <a-modal
-      v-model:open="disableModalVisible"
+      v-model:visible="disableModalVisible"
       title="注销业主账号"
       @ok="handleDisableConfirm"
       :confirmLoading="disableLoading"

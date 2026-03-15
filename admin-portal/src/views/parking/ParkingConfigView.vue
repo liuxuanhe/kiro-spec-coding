@@ -72,7 +72,7 @@
 
     <!-- 修改配置对话框 -->
     <a-modal
-      v-model:open="editModalVisible"
+      v-model:visible="editModalVisible"
       title="修改车位配置"
       @ok="handleEditConfirm"
       :confirmLoading="editLoading"

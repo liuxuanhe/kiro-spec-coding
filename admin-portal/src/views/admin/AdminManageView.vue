@@ -52,7 +52,7 @@
 
     <!-- 创建管理员对话框 -->
     <a-modal
-      v-model:open="createModalVisible"
+      v-model:visible="createModalVisible"
       title="创建物业管理员"
       @ok="handleCreateConfirm"
       :confirmLoading="createLoading"
@@ -81,7 +81,7 @@
 
     <!-- 创建成功提示（显示初始密码） -->
     <a-modal
-      v-model:open="passwordModalVisible"
+      v-model:visible="passwordModalVisible"
       title="创建成功"
       :footer="null"
     >
