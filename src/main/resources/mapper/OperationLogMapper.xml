@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.parking.mapper.OperationLogMapper">
+
+    <insert id="insert" parameterType="com.parking.model.OperationLog" useGeneratedKeys="true" keyProperty="log.id">
+        INSERT INTO sys_operation_log (request_id, community_id, operator_id, operator_name,
+                                       operator_role, operator_ip, operation_type, operation_time,
+                                       target_type, target_id, before_value, after_value,
+                                       operation_result, error_message, create_time)
+        VALUES (#{log.requestId}, #{log.communityId}, #{log.operatorId}, #{log.operatorName},
+                #{log.operatorRole}, #{log.operatorIp}, #{log.operationType}, #{log.operationTime},
+                #{log.targetType}, #{log.targetId}, #{log.beforeValue}, #{log.afterValue},
+                #{log.operationResult}, #{log.errorMessage}, NOW())
+    </insert>
+
+    <select id="selectByCondition" resultType="com.parking.model.OperationLog">
+        SELECT id, request_id, community_id, operator_id, operator_name, operator_role,
+               operator_ip, operation_type, operation_time, target_type, target_id,
+               before_value, after_value, operation_result, error_message, create_time
+        FROM sys_operation_log
+        WHERE 1=1
+        <if test="communityId != null">
+            AND community_id = #{communityId}
+        </if>
+        <if test="operatorId != null">
+            AND operator_id = #{operatorId}
+        </if>
+        <if test="operationType != null and operationType != ''">
+            AND operation_type = #{operationType}
+        </if>
+        <if test="startTime != null and startTime != ''">
+            AND operation_time &gt;= #{startTime}
+        </if>
+        <if test="endTime != null and endTime != ''">
+            AND operation_time &lt;= #{endTime}
+        </if>
+        ORDER BY operation_time DESC
+        LIMIT 100
+    </select>
+
+</mapper>
