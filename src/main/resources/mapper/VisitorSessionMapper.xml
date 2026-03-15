@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.parking.mapper.VisitorSessionMapper">
+
+    <resultMap id="BaseResultMap" type="com.parking.model.VisitorSession">
+        <id column="id" property="id"/>
+        <result column="community_id" property="communityId"/>
+        <result column="house_no" property="houseNo"/>
+        <result column="authorization_id" property="authorizationId"/>
+        <result column="car_number" property="carNumber"/>
+        <result column="session_start" property="sessionStart"/>
+        <result column="last_entry_time" property="lastEntryTime"/>
+        <result column="accumulated_duration" property="accumulatedDuration"/>
+        <result column="status" property="status"/>
+        <result column="timeout_notified" property="timeoutNotified"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, community_id, house_no, authorization_id, car_number,
+        session_start, last_entry_time, accumulated_duration, status,
+        timeout_notified, create_time, update_time
+    </sql>
+
+    <select id="sumMonthlyDuration" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(accumulated_duration), 0)
+        FROM visitor_session
+        WHERE community_id = #{communityId}
+          AND house_no = #{houseNo}
+          AND YEAR(create_time) = #{year}
+          AND MONTH(create_time) = #{month}
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM visitor_session
+        WHERE id = #{id}
+    </select>
+
+    <update id="updateDurationAndStatus">
+        UPDATE visitor_session
+        SET accumulated_duration = #{accumulatedDuration},
+            status = #{status},
+            update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectTimeoutSessions" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM visitor_session
+        WHERE accumulated_duration >= 1440
+          AND status = 'in_park'
+          AND (timeout_notified IS NULL OR timeout_notified = 0)
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO visitor_session (community_id, house_no, authorization_id, car_number,
+                                     session_start, last_entry_time, accumulated_duration,
+                                     status, timeout_notified, create_time, update_time)
+        VALUES (#{communityId}, #{houseNo}, #{authorizationId}, #{carNumber},
+                #{sessionStart}, #{lastEntryTime}, #{accumulatedDuration},
+                #{status}, #{timeoutNotified}, NOW(), NOW())
+    </insert>
+
+    <update id="updateStatusAndEntryTime">
+        UPDATE visitor_session
+        SET status = #{status},
+            last_entry_time = #{lastEntryTime},
+            update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectByAuthorizationId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM visitor_session
+        WHERE authorization_id = #{authorizationId}
+        LIMIT 1
+    </select>
+
+    <update id="updateTimeoutNotified">
+        UPDATE visitor_session
+        SET timeout_notified = #{timeoutNotified},
+            update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+</mapper>
