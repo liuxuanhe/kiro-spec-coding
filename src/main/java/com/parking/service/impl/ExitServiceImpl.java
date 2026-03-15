@@ -1,5 +1,8 @@
 package com.parking.service.impl;
 
+import com.parking.common.BusinessException;
+import com.parking.common.ErrorCode;
+import com.parking.dto.ExitExceptionHandleRequest;
 import com.parking.dto.ExitRequest;
 import com.parking.dto.ExitResponse;
 import com.parking.mapper.ParkingCarRecordMapper;
@@ -224,5 +227,59 @@ public class ExitServiceImpl implements ExitService {
             // 缓存失效失败不影响主流程
             log.warn("报表缓存失效失败: communityId={}", communityId, e);
         }
+    }
+
+    @Override
+    public void handleExitException(ExitExceptionHandleRequest request, Long adminId) {
+        Long recordId = request.getRecordId();
+        Long communityId = request.getCommunityId();
+        LocalDateTime now = LocalDateTime.now();
+
+        log.info("处理异常出场: recordId={}, communityId={}, adminId={}", recordId, communityId, adminId);
+
+        // 1. 确定分表名称：优先使用请求中指定的表名，否则自动计算当前月和上个月
+        String tableName = request.getTableName();
+        ParkingCarRecord record = null;
+
+        if (tableName != null && !tableName.isBlank()) {
+            record = parkingCarRecordMapper.selectById(tableName, recordId, communityId);
+        } else {
+            // 先查当前月分表
+            String currentTable = resolveTableName(now);
+            record = parkingCarRecordMapper.selectById(currentTable, recordId, communityId);
+            if (record != null) {
+                tableName = currentTable;
+            } else {
+                // 查上个月分表
+                String lastMonthTable = resolveTableName(now.minusMonths(1));
+                if (!lastMonthTable.equals(currentTable)) {
+                    record = parkingCarRecordMapper.selectById(lastMonthTable, recordId, communityId);
+                    if (record != null) {
+                        tableName = lastMonthTable;
+                    }
+                }
+            }
+        }
+
+        // 2. 验证记录存在
+        if (record == null) {
+            throw new BusinessException(ErrorCode.PARKING_5002);
+        }
+
+        // 3. 验证记录状态为 exit_exception
+        if (!"exit_exception".equals(record.getStatus())) {
+            throw new BusinessException(ErrorCode.PARKING_5003);
+        }
+
+        // 4. 更新异常出场记录
+        record.setHandlerAdminId(adminId);
+        record.setHandleTime(now);
+        record.setHandleRemark(request.getHandleRemark());
+        record.setStatus("exception_handled");
+
+        parkingCarRecordMapper.updateExceptionHandle(tableName, record);
+
+        log.info("异常出场处理完成: recordId={}, adminId={}, handleRemark={}",
+                recordId, adminId, request.getHandleRemark());
     }
 }

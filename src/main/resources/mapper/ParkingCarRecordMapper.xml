@@ -45,4 +45,27 @@
         WHERE id = #{record.id}
     </update>
 
+    <!-- 根据ID和小区ID查询记录 -->
+    <select id="selectById" resultType="com.parking.model.ParkingCarRecord">
+        SELECT id, community_id, house_no, car_number, vehicle_type,
+               enter_time, exit_time, duration, status,
+               exception_reason, handler_admin_id, handle_time, handle_remark,
+               create_time, update_time
+        FROM ${tableName}
+        WHERE id = #{id}
+          AND community_id = #{communityId}
+        LIMIT 1
+    </select>
+
+    <!-- 更新异常出场记录的处理信息 -->
+    <update id="updateExceptionHandle">
+        UPDATE ${tableName}
+        SET handler_admin_id = #{record.handlerAdminId},
+            handle_time = #{record.handleTime},
+            handle_remark = #{record.handleRemark},
+            status = #{record.status},
+            update_time = NOW()
+        WHERE id = #{record.id}
+    </update>
+
 </mapper>

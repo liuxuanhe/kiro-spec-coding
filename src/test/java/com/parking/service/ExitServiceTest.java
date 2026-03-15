@@ -1,5 +1,7 @@
 package com.parking.service;
 
+import com.parking.common.BusinessException;
+import com.parking.dto.ExitExceptionHandleRequest;
 import com.parking.dto.ExitRequest;
 import com.parking.dto.ExitResponse;
 import com.parking.mapper.ParkingCarRecordMapper;
@@ -313,6 +315,126 @@ class ExitServiceTest {
             // 不应抛出异常
             ExitResponse response = assertDoesNotThrow(() -> exitService.vehicleExit(request));
             assertNotNull(response);
+        }
+    }
+
+    @Nested
+    @DisplayName("handleExitException - 异常出场处理")
+    class HandleExitExceptionTests {
+
+        private static final Long ADMIN_ID = 999L;
+        private static final Long RECORD_ID = 200L;
+
+        /**
+         * 创建测试用异常出场处理请求
+         */
+        private ExitExceptionHandleRequest createHandleRequest() {
+            ExitExceptionHandleRequest request = new ExitExceptionHandleRequest();
+            request.setRecordId(RECORD_ID);
+            request.setCommunityId(COMMUNITY_ID);
+            request.setHandleRemark("经核实为临时施工车辆，已放行");
+            return request;
+        }
+
+        /**
+         * 创建测试用异常出场记录（status='exit_exception'）
+         */
+        private ParkingCarRecord createExceptionRecord() {
+            ParkingCarRecord record = new ParkingCarRecord();
+            record.setId(RECORD_ID);
+            record.setCommunityId(COMMUNITY_ID);
+            record.setCarNumber(CAR_NUMBER);
+            record.setExitTime(LocalDateTime.now().minusHours(1));
+            record.setStatus("exit_exception");
+            record.setExceptionReason("无对应入场记录");
+            return record;
+        }
+
+        @Test
+        @DisplayName("正常处理异常出场记录，状态更新为 exception_handled")
+        void shouldHandleExceptionRecordSuccessfully() {
+            ExitExceptionHandleRequest request = createHandleRequest();
+            ParkingCarRecord exceptionRecord = createExceptionRecord();
+
+            // 当前月分表能找到异常记录
+            when(parkingCarRecordMapper.selectById(anyString(), eq(RECORD_ID), eq(COMMUNITY_ID)))
+                    .thenReturn(exceptionRecord);
+
+            exitService.handleExitException(request, ADMIN_ID);
+
+            // 验证更新了异常出场记录
+            ArgumentCaptor<ParkingCarRecord> recordCaptor = ArgumentCaptor.forClass(ParkingCarRecord.class);
+            verify(parkingCarRecordMapper).updateExceptionHandle(anyString(), recordCaptor.capture());
+
+            ParkingCarRecord updatedRecord = recordCaptor.getValue();
+            assertEquals("exception_handled", updatedRecord.getStatus());
+            assertEquals(ADMIN_ID, updatedRecord.getHandlerAdminId());
+            assertNotNull(updatedRecord.getHandleTime());
+            assertEquals("经核实为临时施工车辆，已放行", updatedRecord.getHandleRemark());
+        }
+
+        @Test
+        @DisplayName("指定分表名称时应使用指定的分表查询")
+        void withTableName_shouldUseSpecifiedTable() {
+            ExitExceptionHandleRequest request = createHandleRequest();
+            request.setTableName("parking_car_record_202501");
+            ParkingCarRecord exceptionRecord = createExceptionRecord();
+
+            when(parkingCarRecordMapper.selectById(eq("parking_car_record_202501"), eq(RECORD_ID), eq(COMMUNITY_ID)))
+                    .thenReturn(exceptionRecord);
+
+            exitService.handleExitException(request, ADMIN_ID);
+
+            // 验证使用了指定的分表名称查询
+            verify(parkingCarRecordMapper).selectById(eq("parking_car_record_202501"), eq(RECORD_ID), eq(COMMUNITY_ID));
+            verify(parkingCarRecordMapper).updateExceptionHandle(eq("parking_car_record_202501"), any());
+        }
+
+        @Test
+        @DisplayName("记录不存在时应抛出 PARKING_5002 异常")
+        void recordNotFound_shouldThrowException() {
+            ExitExceptionHandleRequest request = createHandleRequest();
+
+            // 当前月和上个月分表都找不到记录
+            when(parkingCarRecordMapper.selectById(anyString(), eq(RECORD_ID), eq(COMMUNITY_ID)))
+                    .thenReturn(null);
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> exitService.handleExitException(request, ADMIN_ID));
+
+            assertEquals(5002, exception.getCode());
+        }
+
+        @Test
+        @DisplayName("记录状态不是 exit_exception 时应抛出 PARKING_5003 异常")
+        void invalidStatus_shouldThrowException() {
+            ExitExceptionHandleRequest request = createHandleRequest();
+            ParkingCarRecord record = createExceptionRecord();
+            record.setStatus("exited"); // 非异常出场状态
+
+            when(parkingCarRecordMapper.selectById(anyString(), eq(RECORD_ID), eq(COMMUNITY_ID)))
+                    .thenReturn(record);
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> exitService.handleExitException(request, ADMIN_ID));
+
+            assertEquals(5003, exception.getCode());
+        }
+
+        @Test
+        @DisplayName("已处理的记录不应允许重复处理")
+        void alreadyHandled_shouldThrowException() {
+            ExitExceptionHandleRequest request = createHandleRequest();
+            ParkingCarRecord record = createExceptionRecord();
+            record.setStatus("exception_handled"); // 已处理状态
+
+            when(parkingCarRecordMapper.selectById(anyString(), eq(RECORD_ID), eq(COMMUNITY_ID)))
+                    .thenReturn(record);
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> exitService.handleExitException(request, ADMIN_ID));
+
+            assertEquals(5003, exception.getCode());
         }
     }
 }

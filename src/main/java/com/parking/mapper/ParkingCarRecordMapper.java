@@ -51,4 +51,25 @@ public interface ParkingCarRecordMapper {
      */
     void updateExitRecord(@Param("tableName") String tableName,
                           @Param("record") ParkingCarRecord record);
+
+    /**
+     * 根据ID查询异常出场记录
+     *
+     * @param tableName   分表名称
+     * @param id          记录ID
+     * @param communityId 小区ID
+     * @return 异常出场记录，不存在则返回 null
+     */
+    ParkingCarRecord selectById(@Param("tableName") String tableName,
+                                @Param("id") Long id,
+                                @Param("communityId") Long communityId);
+
+    /**
+     * 更新异常出场记录的处理信息
+     *
+     * @param tableName 分表名称
+     * @param record    包含 id、handlerAdminId、handleTime、handleRemark、status 的记录
+     */
+    void updateExceptionHandle(@Param("tableName") String tableName,
+                               @Param("record") ParkingCarRecord record);
 }

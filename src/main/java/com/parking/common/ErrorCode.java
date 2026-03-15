@@ -26,6 +26,8 @@ public enum ErrorCode {
 
     // 5xxx: 入场出场相关
     PARKING_5001(5001, "车位已满，无法入场"),
+    PARKING_5002(5002, "异常出场记录不存在"),
+    PARKING_5003(5003, "该记录状态不是异常出场，无法处理"),
 
     // 7xxx: Visitor 权限相关
     PARKING_7001(7001, "本月 Visitor 时长配额已用完（72小时），无法申请"),
