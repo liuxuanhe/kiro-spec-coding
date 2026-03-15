@@ -34,4 +34,34 @@ public interface OwnerMapper {
      */
     Owner selectByPhoneAndCommunity(@Param("phoneNumber") String phoneNumber,
                                      @Param("communityId") Long communityId);
+
+    /**
+     * 更新业主账号状态
+     *
+     * @param id 业主ID
+     * @param accountStatus 账号状态
+     * @return 更新行数
+     */
+    int updateAccountStatus(@Param("id") Long id,
+                            @Param("accountStatus") String accountStatus);
+
+    /**
+     * 更新业主手机号
+     *
+     * @param id          业主ID
+     * @param phoneNumber 新手机号
+     * @return 更新行数
+     */
+    int updatePhoneNumber(@Param("id") Long id,
+                          @Param("phoneNumber") String phoneNumber);
+
+    /**
+     * 更新业主真实姓名
+     *
+     * @param id       业主ID
+     * @param realName 新真实姓名
+     * @return 更新行数
+     */
+    int updateRealName(@Param("id") Long id,
+                       @Param("realName") String realName);
 }

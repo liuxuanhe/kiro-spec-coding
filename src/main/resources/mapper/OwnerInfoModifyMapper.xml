@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.parking.mapper.OwnerInfoModifyMapper">
+
+    <!-- 插入修改申请记录，返回自增主键 -->
+    <insert id="insert" parameterType="com.parking.model.OwnerInfoModifyApplication"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_owner_info_modify_application
+            (community_id, owner_id, modify_type, old_value, new_value,
+             apply_reason, status, create_time, update_time, is_deleted)
+        VALUES
+            (#{communityId}, #{ownerId}, #{modifyType}, #{oldValue}, #{newValue},
+             #{applyReason}, #{status}, NOW(), NOW(), 0)
+    </insert>
+
+    <!-- 根据ID查询申请记录 -->
+    <select id="selectById" resultType="com.parking.model.OwnerInfoModifyApplication">
+        SELECT id, community_id, owner_id, modify_type, old_value, new_value,
+               apply_reason, status, reject_reason, audit_admin_id, audit_time,
+               create_time, update_time, is_deleted, deleted_time
+        FROM sys_owner_info_modify_application
+        WHERE id = #{id} AND is_deleted = 0
+    </select>
+
+    <!-- 根据ID查询申请记录（行级锁） -->
+    <select id="selectByIdForUpdate" resultType="com.parking.model.OwnerInfoModifyApplication">
+        SELECT id, community_id, owner_id, modify_type, old_value, new_value,
+               apply_reason, status, reject_reason, audit_admin_id, audit_time,
+               create_time, update_time, is_deleted, deleted_time
+        FROM sys_owner_info_modify_application
+        WHERE id = #{id} AND is_deleted = 0
+        FOR UPDATE
+    </select>
+
+    <!-- 更新审批状态 -->
+    <update id="updateStatus">
+        UPDATE sys_owner_info_modify_application
+        SET status = #{status},
+            reject_reason = #{rejectReason},
+            audit_admin_id = #{auditAdminId},
+            audit_time = NOW(),
+            update_time = NOW()
+        WHERE id = #{id} AND is_deleted = 0
+    </update>
+
+</mapper>

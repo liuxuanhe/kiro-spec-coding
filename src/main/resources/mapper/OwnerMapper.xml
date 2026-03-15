@@ -29,4 +29,25 @@
         WHERE phone_number = #{phoneNumber} AND community_id = #{communityId} AND is_deleted = 0
     </select>
 
+    <!-- 更新业主账号状态 -->
+    <update id="updateAccountStatus">
+        UPDATE sys_owner
+        SET account_status = #{accountStatus}, update_time = NOW()
+        WHERE id = #{id} AND is_deleted = 0
+    </update>
+
+    <!-- 更新业主手机号 -->
+    <update id="updatePhoneNumber">
+        UPDATE sys_owner
+        SET phone_number = #{phoneNumber}, update_time = NOW()
+        WHERE id = #{id} AND is_deleted = 0
+    </update>
+
+    <!-- 更新业主真实姓名 -->
+    <update id="updateRealName">
+        UPDATE sys_owner
+        SET real_name = #{realName}, update_time = NOW()
+        WHERE id = #{id} AND is_deleted = 0
+    </update>
+
 </mapper>
