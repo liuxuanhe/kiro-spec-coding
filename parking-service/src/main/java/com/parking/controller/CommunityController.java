@@ -3,9 +3,11 @@ package com.parking.controller;
 import com.parking.common.ApiResponse;
 import com.parking.common.RequestContext;
 import com.parking.common.RequireRole;
+import com.parking.dto.CommunityCreateRequest;
 import com.parking.model.Community;
 import com.parking.service.CommunityService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -15,8 +17,7 @@ import java.util.Map;
 
 /**
  * 小区管理控制器
- * 提供小区列表查询与切换功能
- * Validates: Requirements 12.2, 12.3
+ * 提供小区 CRUD、列表查询与切换功能
  */
 @Slf4j
 @RestController
@@ -37,6 +38,39 @@ public class CommunityController {
         log.info("查询小区列表: role={}, communityId={}", role, communityId);
         List<Community> list = communityService.listCommunities(role, communityId);
         return ApiResponse.success(list, RequestContext.getRequestId());
+    }
+
+    /**
+     * 创建小区（Super_Admin 专属）
+     * POST /api/v1/communities
+     */
+    @PostMapping("/api/v1/communities")
+    @RequireRole({"super_admin"})
+    public ApiResponse<Community> createCommunity(
+            @Valid @RequestBody CommunityCreateRequest request,
+            HttpServletRequest servletRequest) {
+        Long operatorId = (Long) servletRequest.getAttribute("userId");
+        log.info("创建小区: communityName={}, communityCode={}, operatorId={}",
+                request.getCommunityName(), request.getCommunityCode(), operatorId);
+        Community community = communityService.createCommunity(request, operatorId);
+        return ApiResponse.success(community, RequestContext.getRequestId());
+    }
+
+    /**
+     * 更新小区信息（Super_Admin 专属）
+     * PUT /api/v1/communities/{id}
+     */
+    @PutMapping("/api/v1/communities/{id}")
+    @RequireRole({"super_admin"})
+    public ApiResponse<Community> updateCommunity(
+            @PathVariable Long id,
+            @Valid @RequestBody CommunityCreateRequest request,
+            HttpServletRequest servletRequest) {
+        Long operatorId = (Long) servletRequest.getAttribute("userId");
+        log.info("更新小区: id={}, communityName={}, operatorId={}",
+                id, request.getCommunityName(), operatorId);
+        Community community = communityService.updateCommunity(id, request, operatorId);
+        return ApiResponse.success(community, RequestContext.getRequestId());
     }
 
     /**

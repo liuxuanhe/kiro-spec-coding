@@ -26,4 +26,28 @@ public interface CommunityMapper {
      * @return 小区实体
      */
     Community selectById(@Param("id") Long id);
+
+    /**
+     * 根据小区编码查询小区
+     *
+     * @param communityCode 小区编码
+     * @return 小区实体
+     */
+    Community selectByCode(@Param("communityCode") String communityCode);
+
+    /**
+     * 新增小区
+     *
+     * @param community 小区实体
+     * @return 影响行数
+     */
+    int insert(Community community);
+
+    /**
+     * 更新小区信息
+     *
+     * @param community 小区实体
+     * @return 影响行数
+     */
+    int update(Community community);
 }

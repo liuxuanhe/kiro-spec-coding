@@ -20,4 +20,34 @@
         WHERE id = #{id} AND is_deleted = 0
     </select>
 
+    <!-- 根据小区编码查询小区 -->
+    <select id="selectByCode" resultType="com.parking.model.Community">
+        SELECT id, community_name, community_code, province, city, district,
+               address, contact_person, contact_phone, status, create_time, update_time
+        FROM sys_community
+        WHERE community_code = #{communityCode} AND is_deleted = 0
+    </select>
+
+    <!-- 新增小区 -->
+    <insert id="insert" parameterType="com.parking.model.Community" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_community (community_name, community_code, province, city, district,
+                                   address, contact_person, contact_phone, status)
+        VALUES (#{communityName}, #{communityCode}, #{province}, #{city}, #{district},
+                #{address}, #{contactPerson}, #{contactPhone}, #{status})
+    </insert>
+
+    <!-- 更新小区信息 -->
+    <update id="update" parameterType="com.parking.model.Community">
+        UPDATE sys_community
+        SET community_name = #{communityName},
+            province = #{province},
+            city = #{city},
+            district = #{district},
+            address = #{address},
+            contact_person = #{contactPerson},
+            contact_phone = #{contactPhone},
+            status = #{status}
+        WHERE id = #{id} AND is_deleted = 0
+    </update>
+
 </mapper>

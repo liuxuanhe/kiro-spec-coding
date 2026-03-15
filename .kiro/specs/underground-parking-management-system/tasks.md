@@ -1308,3 +1308,148 @@
 - 使用事务确保数据一致性
 - 使用备份确保数据安全
 - 使用归档确保数据保留
+
+- [x] 26. Admin_Portal 角色权限体系与 Super_Admin 专属功能
+  - [x] 26.1 后端：实现管理员 CRUD 接口
+    - 新增 `POST /api/v1/admins` 接口（Super_Admin 创建 Property_Admin）
+      - 参数：`username`、`realName`、`phoneNumber`、`communityId`、`role`（仅允许 `property_admin`）
+      - 生成随机初始密码，设置 `mustChangePassword = 1`
+      - 记录操作日志到 `sys_operation_log`
+    - 新增 `GET /api/v1/admins` 接口（查询管理员列表）
+      - Super_Admin 可查看所有管理员
+      - Property_Admin 仅可查看本小区管理员
+      - 返回字段包含 `id`、`username`、`realName`、`role`、`communityId`、`status`、`lastLoginTime`
+      - 手机号执行 Desensitization 处理
+    - 新增 `POST /api/v1/admins/{adminId}/unlock` 接口（Super_Admin 解锁被锁定的管理员账号）
+      - 仅允许 Super_Admin 执行
+      - 重置 `loginFailCount = 0`，`status = 'active'`
+      - 记录操作日志
+    - 新增 `POST /api/v1/admins/{adminId}/reset-password` 接口（Super_Admin 重置管理员密码）
+      - 仅允许 Super_Admin 执行
+      - 生成随机新密码，设置 `mustChangePassword = 1`
+      - 记录操作日志
+    - 在 `AdminMapper` 中新增 `selectList`、`unlockAccount`、`resetPassword` 方法及对应 XML 映射
+    - _Requirements: 13.1, 13.2, 13.6, 13.7_
+    - status: TODO
+
+  - [x] 26.2 后端：实现角色校验注解与拦截机制
+    - 创建 `@RequireRole` 注解，支持指定允许的角色列表（如 `@RequireRole({"super_admin"})`）
+    - 创建 `RoleCheckAspect` 切面，从请求属性中读取 `auth_userRole` 并校验
+    - 校验失败抛出 `BusinessException(ErrorCode.PARKING_12001)`
+    - 在以下 Controller 方法上添加角色注解：
+      - `IpWhitelistController` 全部方法：`@RequireRole({"super_admin"})`
+      - `OwnerController.disable`：`@RequireRole({"super_admin"})`
+      - `ExportController` 原始数据导出：`@RequireRole({"super_admin"})`
+      - 审计日志导出：`@RequireRole({"super_admin"})`
+      - 管理员 CRUD 接口（创建/解锁/重置密码）：`@RequireRole({"super_admin"})`
+    - _Requirements: 12.3, 14.1, 20.4_
+    - status: TODO
+
+  - [x] 26.3 后端：实现小区列表查询与切换接口
+    - 新增 `GET /api/v1/communities` 接口（查询小区列表）
+      - Super_Admin 返回所有小区
+      - Property_Admin 仅返回本小区
+    - 新增 `POST /api/v1/auth/switch-community` 接口（Super_Admin 切换当前操作小区）
+      - 仅允许 Super_Admin 执行
+      - 验证目标 `communityId` 存在
+      - 重新签发包含新 `communityId` 的 Access Token
+      - 记录操作日志
+    - 创建 `CommunityController`、`CommunityService`、`CommunityMapper` 及对应 XML 映射
+    - _Requirements: 12.2, 12.3_
+    - status: TODO
+
+  - [x] 26.4 前端：实现路由角色守卫
+    - 在路由 `meta` 中增加 `roles` 字段，定义每个路由允许的角色列表
+    - 修改 `router.beforeEach` 守卫，增加角色校验逻辑：
+      - 如果路由定义了 `meta.roles`，校验 `authStore.role` 是否在允许列表中
+      - 校验失败重定向到首页或显示无权限提示
+    - 各路由角色配置：
+      - 通用页面（业主审核、车辆管理、Visitor 审批、车位配置、报表、僵尸车辆）：`['super_admin', 'property_admin']`
+      - Super_Admin 专属页面（管理员管理、IP 白名单、小区切换）：`['super_admin']`
+      - 审计日志页面：`['super_admin', 'property_admin']`（导出功能仅 Super_Admin 可见）
+    - status: TODO
+
+  - [x] 26.5 前端：侧边栏菜单按角色动态渲染
+    - 修改 `BasicLayout.vue`，根据 `authStore.role` 动态过滤菜单项
+    - 新增 Super_Admin 专属菜单组：
+      - 「管理员管理」菜单（包含：管理员列表）
+      - 「IP 白名单」菜单（包含：白名单配置）
+    - 在顶部导航栏显示当前角色标识和当前操作小区名称
+    - Super_Admin 在顶部导航栏增加「切换小区」下拉选择器
+    - Property_Admin 不显示切换小区功能，固定显示绑定的小区名称
+    - status: TODO
+
+  - [x] 26.6 前端：实现管理员管理页面（Super_Admin 专属）
+    - 创建 `admin-portal/src/views/admin/AdminManageView.vue`
+    - 创建 `admin-portal/src/api/admin.js`（管理员 CRUD API）
+    - 页面功能：
+      - 管理员列表表格（显示用户名、姓名、角色、所属小区、状态、最后登录时间）
+      - 「创建物业管理员」按钮 → 弹出创建表单（用户名、姓名、手机号、选择小区）
+      - 「解锁」按钮（仅对 `status = 'locked'` 的管理员显示）
+      - 「重置密码」按钮
+      - 手机号脱敏显示
+    - 在路由中注册 `/admins` 路由，`meta.roles: ['super_admin']`
+    - status: TODO
+
+  - [x] 26.7 前端：实现 IP 白名单管理页面（Super_Admin 专属）
+    - 创建 `admin-portal/src/views/ip-whitelist/IpWhitelistView.vue`
+    - 页面功能：
+      - IP 白名单列表表格（显示 IP 地址、操作类型、描述、创建时间）
+      - 「添加 IP」按钮 → 弹出添加表单（IP 地址、操作类型、描述）
+      - 「删除」按钮（带二次确认）
+    - 在路由中注册 `/ip-whitelist` 路由，`meta.roles: ['super_admin']`
+    - status: TODO
+
+  - [x] 26.8 前端：业主审核页面增加注销功能入口（Super_Admin 可见）
+    - 修改 `OwnerAuditView.vue`，在业主列表操作列中增加「注销」按钮
+    - 仅当 `authStore.role === 'super_admin'` 时显示
+    - 点击后弹出确认对话框，要求填写注销原因
+    - 调用 `POST /api/v1/owners/{ownerId}/disable` 接口
+    - status: TODO
+
+  - [x] 26.9 前端：审计日志页面导出按钮权限控制
+    - 修改 `AuditLogView.vue`，导出按钮仅当 `authStore.role === 'super_admin'` 时显示
+    - status: TODO
+
+  - [ ]* 26.10 编写管理员 CRUD 接口单元测试
+    - 测试创建 Property_Admin 流程（含初始密码生成、`mustChangePassword` 设置）
+    - 测试 Super_Admin 解锁管理员账号
+    - 测试 Super_Admin 重置管理员密码
+    - 测试 Property_Admin 无权执行创建/解锁/重置操作
+    - 测试角色校验注解拦截非授权角色
+    - _Requirements: 13.1, 13.2, 13.6, 13.7, 14.1_
+    - status: TODO
+
+  - [ ]* 26.11 编写小区切换接口单元测试
+    - 测试 Super_Admin 切换小区成功（返回新 Token）
+    - 测试 Property_Admin 无权切换小区
+    - 测试切换到不存在的 `communityId` 返回错误
+    - _Requirements: 12.2, 12.3_
+    - status: TODO
+
+- [x] 27. 小区管理功能（Community CRUD）
+  - [x] 27.1 后端：扩展 CommunityMapper、CommunityService、CommunityController，新增创建和更新小区接口
+    - 新增 `POST /api/v1/communities` 接口（Super_Admin 创建小区）
+      - 参数：`communityName`、`communityCode`、`province`、`city`、`district`、`address`、`contactPerson`、`contactPhone`
+      - 校验 `communityCode` 唯一性，重复时返回 `PARKING_12002`
+      - 记录操作日志
+    - 新增 `PUT /api/v1/communities/{id}` 接口（Super_Admin 更新小区信息）
+      - 校验小区存在，不存在时返回 `PARKING_12001`
+      - 记录操作日志
+    - 扩展 `CommunityMapper` 新增 `selectByCode`、`insert`、`update` 方法及对应 XML 映射
+    - 新增 `CommunityCreateRequest` DTO
+    - 新增 `PARKING_12002` 错误码（小区编码已存在）
+    - status: DONE
+    - executionNotes: 后端 Community CRUD 全部实现完成，包含 CommunityCreateRequest DTO、CommunityMapper 扩展（selectByCode/insert/update）、CommunityService 扩展（createCommunity/updateCommunity）、CommunityController 扩展（POST/PUT 接口），编译和测试均通过。
+
+  - [x] 27.2 前端：实现小区管理页面（Super_Admin 专属）
+    - 创建 `admin-portal/src/views/community/CommunityManageView.vue`
+    - 扩展 `admin-portal/src/api/community.js`（新增 `createCommunity`、`updateCommunity` API）
+    - 页面功能：
+      - 小区列表表格（显示 ID、名称、编码、省市区、联系人、联系电话、状态）
+      - 「创建小区」按钮 → 弹出创建表单
+      - 「编辑」按钮 → 弹出编辑表单（编码不可修改）
+    - 在路由中注册 `/communities` 路由，`meta.roles: ['super_admin']`
+    - 在 `BasicLayout.vue` 侧边栏新增「小区管理」菜单（Super_Admin 专属，使用 `HomeOutlined` 图标）
+    - status: DONE
+    - executionNotes: 前端小区管理页面实现完成，包含列表展示、创建和编辑弹窗，路由和菜单已注册。

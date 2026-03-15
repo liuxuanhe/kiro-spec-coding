@@ -114,6 +114,13 @@
             <template #title>IP 白名单</template>
             <a-menu-item key="/ip-whitelist">白名单配置</a-menu-item>
           </a-sub-menu>
+
+          <!-- Super_Admin 专属：小区管理 -->
+          <a-sub-menu v-if="authStore.role === 'super_admin'" key="community-manage">
+            <template #icon><HomeOutlined /></template>
+            <template #title>小区管理</template>
+            <a-menu-item key="/communities">小区列表</a-menu-item>
+          </a-sub-menu>
         </a-menu>
       </a-layout-sider>
 
@@ -131,7 +138,7 @@ import { useRouter, useRoute } from 'vue-router'
 import {
   TeamOutlined, CarOutlined, UserSwitchOutlined, SettingOutlined,
   BarChartOutlined, WarningOutlined, FileSearchOutlined,
-  UserOutlined, SafetyOutlined
+  UserOutlined, SafetyOutlined, HomeOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import { useAuthStore } from '@/stores/auth'

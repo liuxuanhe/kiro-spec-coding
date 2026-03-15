@@ -76,6 +76,12 @@ const routes = [
         name: 'IpWhitelist',
         component: () => import('@/views/ip-whitelist/IpWhitelistView.vue'),
         meta: { requiresAuth: true, roles: ['super_admin'] }
+      },
+      {
+        path: '/communities',
+        name: 'CommunityManage',
+        component: () => import('@/views/community/CommunityManageView.vue'),
+        meta: { requiresAuth: true, roles: ['super_admin'] }
       }
     ]
   }
