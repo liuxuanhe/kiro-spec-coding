@@ -3,10 +3,12 @@ package com.parking.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.parking.interceptor.AccessLogInterceptor;
 import com.parking.interceptor.AuthenticationInterceptor;
+import com.parking.interceptor.RateLimitInterceptor;
 import com.parking.interceptor.RequestIdInterceptor;
 import com.parking.service.AntiReplayService;
 import com.parking.service.JwtTokenService;
 import com.parking.service.SignatureService;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -33,17 +35,20 @@ public class WebConfig implements WebMvcConfigurer {
     private final AntiReplayService antiReplayService;
     private final ObjectMapper objectMapper;
     private final AccessLogInterceptor accessLogInterceptor;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     public WebConfig(JwtTokenService jwtTokenService,
                      SignatureService signatureService,
                      AntiReplayService antiReplayService,
                      ObjectMapper objectMapper,
-                     AccessLogInterceptor accessLogInterceptor) {
+                     AccessLogInterceptor accessLogInterceptor,
+                     RedisTemplate<String, Object> redisTemplate) {
         this.jwtTokenService = jwtTokenService;
         this.signatureService = signatureService;
         this.antiReplayService = antiReplayService;
         this.objectMapper = objectMapper;
         this.accessLogInterceptor = accessLogInterceptor;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -53,16 +58,21 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .order(0);
 
-        // AuthenticationInterceptor 在 RequestIdInterceptor 之后执行
+        // RateLimitInterceptor 在 RequestId 之后执行，限流保护
+        registry.addInterceptor(new RateLimitInterceptor(redisTemplate, objectMapper))
+                .addPathPatterns("/api/**")
+                .order(1);
+
+        // AuthenticationInterceptor 在限流之后执行
         registry.addInterceptor(new AuthenticationInterceptor(
                         jwtTokenService, signatureService, antiReplayService, objectMapper))
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(EXCLUDE_PATHS)
-                .order(1);
+                .order(2);
 
         // AccessLogInterceptor 最后执行，记录所有接口访问日志
         registry.addInterceptor(accessLogInterceptor)
                 .addPathPatterns("/api/**")
-                .order(2);
+                .order(3);
     }
 }
