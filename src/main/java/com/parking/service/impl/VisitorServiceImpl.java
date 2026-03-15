@@ -2,18 +2,28 @@ package com.parking.service.impl;
 
 import com.parking.common.BusinessException;
 import com.parking.common.ErrorCode;
+import com.parking.common.RequestContext;
 import com.parking.dto.VisitorApplyRequest;
 import com.parking.dto.VisitorApplyResponse;
+import com.parking.dto.VisitorAuditRequest;
 import com.parking.mapper.CarPlateMapper;
 import com.parking.mapper.VisitorApplicationMapper;
+import com.parking.mapper.VisitorAuthorizationMapper;
 import com.parking.model.CarPlate;
 import com.parking.model.VisitorApplication;
+import com.parking.model.VisitorAuthorization;
+import com.parking.service.IdempotencyService;
+import com.parking.service.NotificationService;
 import com.parking.service.ParkingSpaceCalculator;
 import com.parking.service.VisitorQuotaManager;
 import com.parking.service.VisitorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * Visitor 权限服务实现
@@ -26,8 +36,11 @@ public class VisitorServiceImpl implements VisitorService {
 
     private final CarPlateMapper carPlateMapper;
     private final VisitorApplicationMapper visitorApplicationMapper;
+    private final VisitorAuthorizationMapper visitorAuthorizationMapper;
     private final VisitorQuotaManager visitorQuotaManager;
     private final ParkingSpaceCalculator parkingSpaceCalculator;
+    private final IdempotencyService idempotencyService;
+    private final NotificationService notificationService;
 
     @Override
     public VisitorApplyResponse apply(VisitorApplyRequest request, Long ownerId,
@@ -71,5 +84,72 @@ public class VisitorServiceImpl implements VisitorService {
         response.setStatus("submitted");
         response.setCreateTime(application.getCreateTime());
         return response;
+    }
+
+    @Override
+    @Transactional
+    public void audit(Long visitorId, VisitorAuditRequest request, Long adminId, Long communityId) {
+        // 1. 检查幂等键
+        String requestId = request.getRequestId() != null ? request.getRequestId() : RequestContext.getRequestId();
+        String idempotencyKey = idempotencyService.generateKey("visitor_audit", communityId, visitorId, requestId);
+        if (!idempotencyService.checkAndSet(idempotencyKey, "{}", 300)) {
+            log.info("Visitor 审批重复请求, visitorId={}, idempotencyKey={}", visitorId, idempotencyKey);
+            return;
+        }
+
+        // 2. 行级锁查询申请记录
+        VisitorApplication application = visitorApplicationMapper.selectByIdForUpdate(visitorId);
+        if (application == null) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "Visitor 申请不存在");
+        }
+
+        // 3. 验证状态为 submitted
+        if (!"submitted".equals(application.getStatus())) {
+            throw new BusinessException(ErrorCode.PARKING_2001);
+        }
+
+        // 4. 验证小区权限
+        if (!application.getCommunityId().equals(communityId)) {
+            throw new BusinessException(ErrorCode.PARKING_12001);
+        }
+
+        boolean approved = "approve".equals(request.getAction());
+
+        if (approved) {
+            // 5a. 审批通过：更新状态为 approved_pending_activation
+            visitorApplicationMapper.updateStatus(visitorId, "approved_pending_activation", null, adminId);
+
+            // 创建授权记录，设置24小时激活窗口
+            LocalDateTime now = LocalDateTime.now();
+            VisitorAuthorization authorization = new VisitorAuthorization();
+            authorization.setCommunityId(application.getCommunityId());
+            authorization.setHouseNo(application.getHouseNo());
+            authorization.setApplicationId(visitorId);
+            authorization.setCarPlateId(application.getCarPlateId());
+            authorization.setCarNumber(application.getCarNumber());
+            authorization.setStatus("approved_pending_activation");
+            authorization.setStartTime(now);
+            authorization.setExpireTime(now.plusHours(24));
+            visitorAuthorizationMapper.insert(authorization);
+
+            log.info("Visitor 审批通过, visitorId={}, authorizationId={}, 激活窗口截止={}",
+                    visitorId, authorization.getId(), authorization.getExpireTime());
+        } else {
+            // 5b. 审批驳回：更新状态为 rejected
+            visitorApplicationMapper.updateStatus(visitorId, "rejected", request.getRejectReason(), adminId);
+            log.info("Visitor 审批驳回, visitorId={}, 原因={}", visitorId, request.getRejectReason());
+        }
+
+        // 6. 发送订阅消息通知业主
+        try {
+            String resultText = approved ? "通过" : "驳回";
+            notificationService.sendSubscriptionMessage(
+                    application.getOwnerId(),
+                    "visitor_audit_result",
+                    Map.of("result", resultText, "carNumber", application.getCarNumber())
+            );
+        } catch (Exception e) {
+            log.warn("Visitor 审批通知发送失败, visitorId={}", visitorId, e);
+        }
     }
 }

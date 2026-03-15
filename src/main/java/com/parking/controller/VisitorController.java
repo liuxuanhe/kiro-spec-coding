@@ -4,10 +4,12 @@ import com.parking.common.ApiResponse;
 import com.parking.common.RequestContext;
 import com.parking.dto.VisitorApplyRequest;
 import com.parking.dto.VisitorApplyResponse;
+import com.parking.dto.VisitorAuditRequest;
 import com.parking.service.VisitorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -39,5 +41,20 @@ public class VisitorController {
                 request.getCarNumber(), communityId, houseNo, ownerId);
         VisitorApplyResponse response = visitorService.apply(request, ownerId, communityId, houseNo);
         return ApiResponse.success(response, RequestContext.getRequestId());
+    }
+
+    /**
+     * 审批 Visitor 申请
+     * POST /api/v1/visitors/{visitorId}/audit
+     */
+    @PostMapping("/{visitorId}/audit")
+    public ApiResponse<Void> audit(@PathVariable Long visitorId,
+                                    @Valid @RequestBody VisitorAuditRequest request,
+                                    @RequestParam Long adminId,
+                                    @RequestParam Long communityId) {
+        log.info("Visitor 审批请求: visitorId={}, action={}, adminId={}, communityId={}",
+                visitorId, request.getAction(), adminId, communityId);
+        visitorService.audit(visitorId, request, adminId, communityId);
+        return ApiResponse.success(RequestContext.getRequestId());
     }
 }

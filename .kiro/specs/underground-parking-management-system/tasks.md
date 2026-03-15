@@ -69,8 +69,8 @@
     - 创建 parking_fee (停车费用表 - 预留)
     - _Requirements: 21.3, 20.4, 22.3, 24.1, 16.4, 1.2, 29.1, 30.1_
 
-- [ ] 3. 认证鉴权模块实现
-  - [-] 3.1 实现 JWT Token 管理
+- [x] 3. 认证鉴权模块实现
+  - [x] 3.1 实现 JWT Token 管理
     - 创建 JwtTokenService 接口和实现类
     - 实现 generateAccessToken() (有效期2小时，包含 userId, role, communityId, houseNo)
     - 实现 generateRefreshToken() (有效期7天)
@@ -78,20 +78,20 @@
     - 实现 revokeToken() 撤销 Token
     - _Requirements: 13.1, 13.2, 13.3_
 
-  - [ ] 3.2 实现签名验证机制
+  - [x] 3.2 实现签名验证机制
     - 创建 SignatureService 接口和实现类
     - 实现签名算法 SHA256(timestamp + nonce + requestBody + secretKey)
     - 实现签名验证逻辑
     - _Requirements: 19.9, 19.10_
 
-  - [ ] 3.3 实现防重放机制
+  - [x] 3.3 实现防重放机制
     - 创建 AntiReplayService 接口和实现类
     - 实现 timestamp 验证 (5分钟窗口)
     - 实现 nonce 唯一性验证 (Redis 存储，5分钟过期)
     - 返回对应错误码 PARKING_19001, PARKING_19002, PARKING_19003
     - _Requirements: 19.5, 19.6, 19.7, 19.8_
 
-  - [ ] 3.4 实现权限校验
+  - [x] 3.4 实现权限校验
     - 创建 AuthorizationService 接口和实现类
     - 实现 checkCommunityAccess() 验证小区访问权限
     - 实现 checkHouseNoAccess() 验证房屋号数据域权限
@@ -100,7 +100,7 @@
     - 返回错误码 PARKING_12001, PARKING_20001
     - _Requirements: 12.5, 12.6, 12.7, 20.2, 20.3_
 
-  - [ ] 3.5 实现 API Gateway 拦截器
+  - [x] 3.5 实现 API Gateway 拦截器
     - 创建 AuthenticationInterceptor 拦截器
     - 验证 JWT Token
     - 验证签名、timestamp、nonce
@@ -109,15 +109,15 @@
     - _Requirements: 19.4, 19.5, 18.3, 18.4_
 
 
-- [ ] 4. 通用基础设施组件实现
-  - [ ] 4.1 实现幂等性组件
+- [x] 4. 通用基础设施组件实现
+  - [x] 4.1 实现幂等性组件
     - 创建 IdempotencyService 接口和实现类
     - 实现 checkAndSet() 检查并设置幂等键 (Redis 存储，5分钟过期)
     - 实现 getResult() 获取幂等结果
     - 实现 generateKey() 生成幂等键 (格式: {operationType}:{communityId}:{targetId}:{requestId})
     - _Requirements: 2.8, 5.7, 7.10_
 
-  - [ ] 4.2 实现分布式锁组件
+  - [x] 4.2 实现分布式锁组件
     - 创建 DistributedLockService 接口和实现类
     - 实现 tryLock() 获取 Redis 分布式锁 (超时时间5秒)
     - 实现 unlock() 释放锁
@@ -125,21 +125,21 @@
     - 实现锁获取失败重试机制 (最多3次，间隔100ms)
     - _Requirements: 4.10, 5.10_
 
-  - [ ] 4.3 实现缓存管理组件
+  - [x] 4.3 实现缓存管理组件
     - 创建 CacheService 接口和实现类
     - 实现缓存键生成策略 ({resource}:{communityId}:{houseNo})
     - 实现缓存失效策略
     - 配置缓存过期时间 (报表1小时，IP白名单1小时，热点数据30分钟)
     - _Requirements: 21.7, 21.8_
 
-  - [ ] 4.4 实现数据脱敏组件
+  - [x] 4.4 实现数据脱敏组件
     - 创建 MaskingService 接口和实现类
     - 实现 maskPhoneNumber() 脱敏为 "138****5678" 格式
     - 实现 maskIdCard() 仅显示后4位
     - 在所有查询接口响应中自动执行脱敏
     - _Requirements: 17.1, 17.2, 17.8_
 
-  - [ ] 4.5 实现通知服务组件
+  - [x] 4.5 实现通知服务组件
     - 创建 NotificationService 接口和实现类
     - 实现 sendSubscriptionMessage() 发送订阅消息
     - 实现失败重试机制 (最多3次: 1分钟、5分钟、15分钟)
@@ -147,7 +147,7 @@
     - _Requirements: 2.5, 2.6, 7.8_
 
 - [ ] 5. 用户管理模块实现
-  - [ ] 5.1 实现验证码服务
+  - [x] 5.1 实现验证码服务
     - 创建 VerificationCodeService 接口和实现类
     - 实现 send() 发送验证码 (6位数字，5分钟有效)
     - 实现 verify() 验证码校验
@@ -155,7 +155,7 @@
     - 返回错误码 PARKING_1001, PARKING_1002
     - _Requirements: 1.2, 1.3_
 
-  - [ ] 5.2 实现业主注册接口
+  - [x] 5.2 实现业主注册接口
     - 创建 OwnerController 和 OwnerService
     - 实现 POST /api/v1/owners/register 接口
     - 验证所有字段格式 (手机号、验证码、房屋号、身份证后4位)
@@ -164,7 +164,7 @@
     - 记录操作日志到 sys_operation_log
     - _Requirements: 1.1, 1.4, 1.5, 1.6, 1.7_
 
-  - [ ]* 5.3 编写业主注册单元测试
+  - [x]* 5.3 编写业主注册单元测试
     - 测试字段格式验证
     - 测试验证码失败3次锁定
     - 测试验证码5分钟过期
@@ -172,7 +172,7 @@
     - 测试同房屋号多业主支持
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.7_
 
-  - [ ] 5.4 实现业主审核接口
+  - [x] 5.4 实现业主审核接口
     - 实现 POST /api/v1/owners/{ownerId}/audit 接口
     - 使用幂等键防止重复审核
     - 使用行级锁 (SELECT FOR UPDATE) 防止并发冲突
@@ -183,7 +183,7 @@
     - 返回错误码 PARKING_2001
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.8_
 
-  - [ ]* 5.5 编写业主审核属性测试
+  - [x]* 5.5 编写业主审核属性测试
     - **Property 4: 审批操作幂等性**
     - **Validates: Requirements 2.8**
     - 测试重复审批请求返回相同结果
@@ -199,14 +199,14 @@
     - _Requirements: 2.1, 2.2, 2.3, 2.7_
 
 
-  - [ ] 5.7 实现管理员账号初始化
+  - [x] 5.7 实现管理员账号初始化
     - 实现系统首次启动时生成随机密码
     - 创建超级管理员账号
     - 设置 must_change_password = 1
     - 实现首次登录强制修改密码
     - _Requirements: 13.1, 13.2, 13.3_
 
-  - [ ] 5.8 实现管理员登录接口
+  - [x] 5.8 实现管理员登录接口
     - 实现 POST /api/v1/auth/login 接口
     - 验证用户名和密码 (BCrypt)
     - 验证密码强度 (至少8位，包含大小写字母、数字、特殊字符)
@@ -215,7 +215,7 @@
     - 记录登录日志到 sys_access_log
     - _Requirements: 13.4, 13.5, 13.6, 13.8_
 
-  - [ ] 5.9 实现业主账号注销接口
+  - [x] 5.9 实现业主账号注销接口
     - 实现 POST /api/v1/owners/{ownerId}/disable 接口
     - 仅允许超级管理员执行
     - 验证所有车辆均不在场
@@ -225,7 +225,7 @@
     - 返回错误码 PARKING_14001
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6, 14.7, 14.8_
 
-  - [ ] 5.10 实现敏感信息修改申请和审批
+  - [x] 5.10 实现敏感信息修改申请和审批
     - 实现 POST /api/v1/owners/info-modify/apply 接口 (业主申请)
     - 实现 POST /api/v1/owners/info-modify/{applyId}/audit 接口 (物业审批)
     - 创建修改申请记录，状态为 pending
@@ -236,7 +236,7 @@
     - _Requirements: 24.1, 24.2, 24.3, 24.4, 24.5, 24.6_
 
 - [ ] 6. 车辆管理模块实现
-  - [ ] 6.1 实现车牌格式验证
+  - [x] 6.1 实现车牌格式验证
     - 创建 CarPlateValidator 工具类
     - 实现中国车牌格式验证正则表达式
     - 支持标准车牌格式 (如 京A12345、京AD12345)
@@ -249,7 +249,7 @@
     - 测试无效车牌格式被拒绝
     - _Requirements: 3.2_
 
-  - [ ] 6.3 实现车牌添加接口
+  - [x] 6.3 实现车牌添加接口
     - 创建 VehicleController 和 VehicleService
     - 实现 POST /api/v1/vehicles 接口
     - 验证车牌格式
@@ -268,7 +268,7 @@
     - 测试缓存失效
     - _Requirements: 3.1, 3.2, 3.3, 3.5_
 
-  - [ ] 6.5 实现车牌删除接口
+  - [x] 6.5 实现车牌删除接口
     - 实现 DELETE /api/v1/vehicles/{vehicleId} 接口
     - 验证车辆当前不在场
     - 执行逻辑删除 (设置 is_deleted = 1)
@@ -283,7 +283,7 @@
     - 测试在场车辆拒绝删除
     - _Requirements: 3.6, 3.7_
 
-  - [ ] 6.7 实现车牌查询接口
+  - [x] 6.7 实现车牌查询接口
     - 实现 GET /api/v1/vehicles 接口
     - 使用 community_id + house_no 查询
     - 返回房屋号下所有车牌 (支持同房屋号多业主)
@@ -292,7 +292,7 @@
     - _Requirements: 11.1, 11.5_
 
 
-  - [ ] 6.8 实现 Primary 车辆设置接口
+  - [x] 6.8 实现 Primary 车辆设置接口
     - 实现 PUT /api/v1/vehicles/{vehicleId}/primary 接口
     - 获取分布式锁 lock:primary:{communityId}:{houseNo}
     - 使用行级锁 (SELECT FOR UPDATE) 查询房屋号下所有车辆
@@ -323,7 +323,7 @@
     - _Requirements: 4.2, 4.3, 4.5, 4.6, 4.7, 4.8_
 
 - [ ] 7. 车位管理与计算模块实现
-  - [ ] 7.1 实现车位配置管理
+  - [x] 7.1 实现车位配置管理
     - 创建 ParkingConfigController 和 ParkingConfigService
     - 实现 GET /api/v1/parking/config 接口
     - 实现 PUT /api/v1/parking/config 接口
@@ -336,7 +336,7 @@
     - 返回错误码 PARKING_9002
     - _Requirements: 9.5, 9.6, 9.7, 9.8_
 
-  - [ ] 7.2 实现车位数量计算器
+  - [x] 7.2 实现车位数量计算器
     - 创建 ParkingSpaceCalculator 接口和实现类
     - 实现 calculateAvailableSpaces() 计算可用车位数
     - 公式: Available_Spaces = total_spaces - COUNT(status='entered')
@@ -360,7 +360,7 @@
     - _Requirements: 9.6, 9.7, 9.8_
 
 - [ ] 8. 入场出场模块实现
-  - [ ] 8.1 实现车辆入场接口
+  - [x] 8.1 实现车辆入场接口
     - 创建 EntryController 和 EntryService
     - 实现 POST /api/v1/parking/entry 接口
     - 检查幂等键 vehicle_entry:{communityId}:{carNumber}:{minute}
@@ -392,7 +392,7 @@
     - 测试分布式锁保护
     - _Requirements: 5.1, 5.3, 5.4, 5.9, 5.10, 15.2_
 
-  - [ ] 8.4 实现车辆出场接口
+  - [x] 8.4 实现车辆出场接口
     - 实现 POST /api/v1/parking/exit 接口
     - 查找对应的入场记录 (status='entered')
     - 如果找到，更新状态为 exited，记录 exit_time
@@ -411,14 +411,14 @@
     - 测试车位数量更新
     - _Requirements: 6.2, 6.3, 6.4, 6.7_
 
-  - [ ] 8.6 实现异常出场处理接口
+  - [x] 8.6 实现异常出场处理接口
     - 实现 POST /api/v1/parking/exit-exception/handle 接口
     - 物业管理员填写处理原因
     - 更新异常出场记录
     - 记录操作日志
     - _Requirements: 6.5, 6.6_
 
-  - [ ] 8.7 实现入场记录查询接口
+  - [x] 8.7 实现入场记录查询接口
     - 实现 GET /api/v1/parking/records 接口
     - 使用 community_id + house_no 查询
     - 支持时间范围查询 (必填参数)
@@ -436,7 +436,7 @@
     - 测试数据脱敏
     - _Requirements: 15.3, 15.4, 16.1, 16.2, 17.8_
 
-- [ ] 9. Checkpoint - 核心功能验证
+- [x] 9. Checkpoint - 核心功能验证
   - 验证业主注册→审核→车牌添加→Primary 设置→自动入场→出场完整流程
   - 验证车位数量一致性
   - 验证幂等性和防重放机制
@@ -444,8 +444,8 @@
   - 验证审计日志完整性
   - 确保所有测试通过，询问用户是否有问题
 
-- [ ] 10. Visitor 权限模块实现
-  - [ ] 10.1 实现 Visitor 配额管理器
+- [-] 10. Visitor 权限模块实现
+  - [x] 10.1 实现 Visitor 配额管理器
     - 创建 VisitorQuotaManager 接口和实现类
     - 实现 calculateMonthlyUsage() 计算月度配额使用量
     - 公式: SUM(accumulated_duration) WHERE house_no=? AND MONTH(create_time)=?
@@ -454,7 +454,7 @@
     - 实现 checkTimeout() 检查超时会话 (≥ 24小时)
     - _Requirements: 7.2, 8.6, 8.7, 8.8, 8.9, 8.10, 10.2_
 
-  - [ ] 10.2 实现 Visitor 申请接口
+  - [x] 10.2 实现 Visitor 申请接口
     - 创建 VisitorController 和 VisitorService
     - 实现 POST /api/v1/visitors/apply 接口
     - 验证车牌已绑定到业主账号
@@ -470,7 +470,7 @@
     - 测试车牌绑定验证
     - _Requirements: 7.1, 7.2, 7.3, 9.2_
 
-  - [ ] 10.4 实现 Visitor 审批接口
+  - [x] 10.4 实现 Visitor 审批接口
     - 实现 POST /api/v1/visitors/{visitorId}/audit 接口
     - 使用幂等键防止重复审批
     - 使用行级锁防止并发冲突
