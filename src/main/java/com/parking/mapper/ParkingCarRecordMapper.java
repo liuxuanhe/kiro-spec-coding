@@ -152,4 +152,12 @@ public interface ParkingCarRecordMapper {
                                   @Param("communityId") Long communityId,
                                   @Param("startTime") LocalDateTime startTime,
                                   @Param("endTime") LocalDateTime endTime);
+
+    /**
+     * 查询指定小区 status='entered' 且入场时间早于指定时间的车辆（Zombie_Vehicle 候选）
+     * 用于僵尸车辆识别定时任务
+     */
+    List<ParkingCarRecord> selectZombieCandidates(@Param("tableName") String tableName,
+                                                   @Param("communityId") Long communityId,
+                                                   @Param("thresholdTime") LocalDateTime thresholdTime);
 }

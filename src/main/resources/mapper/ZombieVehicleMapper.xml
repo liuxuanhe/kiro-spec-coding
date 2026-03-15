@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.parking.mapper.ZombieVehicleMapper">
+
+    <insert id="insert" parameterType="com.parking.model.ZombieVehicle" useGeneratedKeys="true" keyProperty="zombie.id">
+        INSERT INTO zombie_vehicle (community_id, house_no, car_number, entry_record_id,
+                                    enter_time, continuous_days, status, create_time, update_time)
+        VALUES (#{zombie.communityId}, #{zombie.houseNo}, #{zombie.carNumber}, #{zombie.entryRecordId},
+                #{zombie.enterTime}, #{zombie.continuousDays}, #{zombie.status}, NOW(), NOW())
+    </insert>
+
+    <select id="selectByEntryRecordId" resultType="com.parking.model.ZombieVehicle">
+        SELECT id, community_id, house_no, car_number, entry_record_id, enter_time,
+               continuous_days, status, contact_record, solution, ignore_reason,
+               handler_admin_id, handle_time, create_time, update_time
+        FROM zombie_vehicle
+        WHERE entry_record_id = #{entryRecordId}
+    </select>
+
+    <select id="selectByCommunityAndStatus" resultType="com.parking.model.ZombieVehicle">
+        SELECT id, community_id, house_no, car_number, entry_record_id, enter_time,
+               continuous_days, status, contact_record, solution, ignore_reason,
+               handler_admin_id, handle_time, create_time, update_time
+        FROM zombie_vehicle
+        WHERE community_id = #{communityId}
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+    <update id="updateHandle">
+        UPDATE zombie_vehicle
+        SET status = #{zombie.status},
+            contact_record = #{zombie.contactRecord},
+            solution = #{zombie.solution},
+            ignore_reason = #{zombie.ignoreReason},
+            handler_admin_id = #{zombie.handlerAdminId},
+            handle_time = #{zombie.handleTime},
+            update_time = NOW()
+        WHERE id = #{zombie.id}
+    </update>
+
+</mapper>

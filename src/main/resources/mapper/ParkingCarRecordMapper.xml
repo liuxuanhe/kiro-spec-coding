@@ -151,4 +151,12 @@
         LIMIT #{limit}
     </select>
 
+    <select id="selectZombieCandidates" resultType="com.parking.model.ParkingCarRecord">
+        SELECT id, community_id, house_no, car_number, vehicle_type, enter_time, status
+        FROM ${tableName}
+        WHERE community_id = #{communityId}
+          AND status = 'entered'
+          AND enter_time &lt;= #{thresholdTime}
+    </select>
+
 </mapper>
