@@ -1,6 +1,7 @@
 package com.parking.service;
 
 import com.parking.common.BusinessException;
+import com.parking.common.ErrorCode;
 import com.parking.dto.OwnerRegisterRequest;
 import com.parking.dto.OwnerRegisterResponse;
 import com.parking.mapper.CarPlateMapper;
@@ -165,6 +166,42 @@ class OwnerServiceTest {
                     () -> ownerService.register(request));
 
             assertEquals(1002, exception.getCode());
+            verify(ownerMapper, never()).insert(any());
+            verify(ownerHouseRelMapper, never()).insert(any());
+        }
+
+        @Test
+        @DisplayName("验证码失败3次锁定应返回 PARKING_1001（Requirements 1.2）")
+        void register_verificationLockedAfter3Failures_shouldReturnParking1001() {
+            OwnerRegisterRequest request = createValidRequest();
+            when(verificationCodeService.verify(PHONE, CODE))
+                    .thenThrow(new BusinessException(
+                            ErrorCode.PARKING_1001.getCode(),
+                            ErrorCode.PARKING_1001.getMessage()));
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> ownerService.register(request));
+
+            assertEquals(ErrorCode.PARKING_1001.getCode(), exception.getCode());
+            assertTrue(exception.getMessage().contains("10分钟"));
+            verify(ownerMapper, never()).insert(any());
+            verify(ownerHouseRelMapper, never()).insert(any());
+        }
+
+        @Test
+        @DisplayName("验证码5分钟过期应返回 PARKING_1002（Requirements 1.3）")
+        void register_verificationCodeExpired_shouldReturnParking1002() {
+            OwnerRegisterRequest request = createValidRequest();
+            when(verificationCodeService.verify(PHONE, CODE))
+                    .thenThrow(new BusinessException(
+                            ErrorCode.PARKING_1002.getCode(),
+                            ErrorCode.PARKING_1002.getMessage()));
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> ownerService.register(request));
+
+            assertEquals(ErrorCode.PARKING_1002.getCode(), exception.getCode());
+            assertTrue(exception.getMessage().contains("过期"));
             verify(ownerMapper, never()).insert(any());
             verify(ownerHouseRelMapper, never()).insert(any());
         }
