@@ -7,7 +7,11 @@ import com.parking.dto.EntryRequest;
 import com.parking.dto.EntryResponse;
 import com.parking.mapper.CarPlateMapper;
 import com.parking.mapper.ParkingCarRecordMapper;
+import com.parking.mapper.VisitorAuthorizationMapper;
+import com.parking.mapper.VisitorSessionMapper;
 import com.parking.model.CarPlate;
+import com.parking.model.VisitorAuthorization;
+import com.parking.model.VisitorSession;
 import com.parking.service.impl.EntryServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -47,6 +52,12 @@ class EntryServiceTest {
     private ParkingCarRecordMapper parkingCarRecordMapper;
 
     @Mock
+    private VisitorAuthorizationMapper visitorAuthorizationMapper;
+
+    @Mock
+    private VisitorSessionMapper visitorSessionMapper;
+
+    @Mock
     private CacheService cacheService;
 
     private EntryServiceImpl entryService;
@@ -65,6 +76,8 @@ class EntryServiceTest {
                 parkingSpaceCalculator,
                 carPlateMapper,
                 parkingCarRecordMapper,
+                visitorAuthorizationMapper,
+                visitorSessionMapper,
                 cacheService,
                 objectMapper
         );
@@ -303,6 +316,114 @@ class EntryServiceTest {
             // 验证幂等键格式: vehicle_entry:{communityId}:{carNumber}:{minute}
             verify(idempotencyService).getResult(matches("vehicle_entry:1001:京A12345:\\d{12}"));
             verify(idempotencyService).checkAndSet(matches("vehicle_entry:1001:京A12345:\\d{12}"), anyString(), eq(300));
+        }
+    }
+
+    @Nested
+    @DisplayName("vehicleEntry - Visitor 首次入场激活")
+    class VisitorEntryActivationTests {
+
+        private CarPlate createVisitorCarPlate() {
+            CarPlate carPlate = new CarPlate();
+            carPlate.setId(2L);
+            carPlate.setCommunityId(COMMUNITY_ID);
+            carPlate.setHouseNo(HOUSE_NO);
+            carPlate.setCarNumber(CAR_NUMBER);
+            carPlate.setStatus("visitor");
+            carPlate.setIsDeleted(0);
+            return carPlate;
+        }
+
+        private VisitorAuthorization createPendingAuthorization(LocalDateTime expireTime) {
+            VisitorAuthorization auth = new VisitorAuthorization();
+            auth.setId(10L);
+            auth.setCommunityId(COMMUNITY_ID);
+            auth.setHouseNo(HOUSE_NO);
+            auth.setCarPlateId(2L);
+            auth.setCarNumber(CAR_NUMBER);
+            auth.setStatus("approved_pending_activation");
+            auth.setStartTime(expireTime.minusHours(24));
+            auth.setExpireTime(expireTime);
+            return auth;
+        }
+
+        @Test
+        @DisplayName("Visitor 首次入场 - 激活窗口内，激活成功并创建会话")
+        void visitorEntry_shouldActivateWithinWindow() {
+            EntryRequest request = createEntryRequest();
+            CarPlate carPlate = createVisitorCarPlate();
+            // 激活窗口截止时间在未来
+            VisitorAuthorization auth = createPendingAuthorization(LocalDateTime.now().plusHours(12));
+
+            when(idempotencyService.getResult(anyString())).thenReturn(Optional.empty());
+            when(carPlateMapper.selectByCommunityAndCarNumber(COMMUNITY_ID, CAR_NUMBER)).thenReturn(carPlate);
+            setupLockMock();
+            when(parkingSpaceCalculator.calculateAvailableSpaces(COMMUNITY_ID)).thenReturn(50);
+            when(visitorAuthorizationMapper.selectPendingActivation(COMMUNITY_ID, CAR_NUMBER)).thenReturn(auth);
+            when(idempotencyService.checkAndSet(anyString(), anyString(), eq(300))).thenReturn(true);
+
+            EntryResponse response = entryService.vehicleEntry(request);
+
+            assertNotNull(response);
+            // 验证授权状态更新为 activated
+            verify(visitorAuthorizationMapper).updateActivation(eq(10L), eq("activated"), any(LocalDateTime.class));
+            // 验证创建了 visitor_session
+            verify(visitorSessionMapper).insert(argThat(session ->
+                    session.getCommunityId().equals(COMMUNITY_ID)
+                            && session.getHouseNo().equals(HOUSE_NO)
+                            && session.getAuthorizationId().equals(10L)
+                            && "in_park".equals(session.getStatus())
+                            && session.getAccumulatedDuration() == 0
+            ));
+            // 验证创建了入场记录
+            verify(parkingCarRecordMapper).insertToTable(anyString(), any());
+        }
+
+        @Test
+        @DisplayName("Visitor 首次入场 - 激活窗口已过期，拒绝入场并取消授权")
+        void visitorEntry_shouldRejectWhenWindowExpired() {
+            EntryRequest request = createEntryRequest();
+            CarPlate carPlate = createVisitorCarPlate();
+            // 激活窗口截止时间在过去
+            VisitorAuthorization auth = createPendingAuthorization(LocalDateTime.now().minusHours(1));
+
+            when(idempotencyService.getResult(anyString())).thenReturn(Optional.empty());
+            when(carPlateMapper.selectByCommunityAndCarNumber(COMMUNITY_ID, CAR_NUMBER)).thenReturn(carPlate);
+            setupLockMock();
+            when(parkingSpaceCalculator.calculateAvailableSpaces(COMMUNITY_ID)).thenReturn(50);
+            when(visitorAuthorizationMapper.selectPendingActivation(COMMUNITY_ID, CAR_NUMBER)).thenReturn(auth);
+
+            BusinessException ex = assertThrows(BusinessException.class,
+                    () -> entryService.vehicleEntry(request));
+
+            assertEquals(8001, ex.getCode()); // PARKING_8001
+            // 验证授权状态更新为 canceled_no_entry
+            verify(visitorAuthorizationMapper).updateStatus(10L, "canceled_no_entry");
+            // 验证未创建入场记录
+            verify(parkingCarRecordMapper, never()).insertToTable(anyString(), any());
+        }
+
+        @Test
+        @DisplayName("Visitor 入场 - 无待激活授权，允许通过（再次入场场景）")
+        void visitorEntry_shouldAllowWhenNoPendingAuth() {
+            EntryRequest request = createEntryRequest();
+            CarPlate carPlate = createVisitorCarPlate();
+
+            when(idempotencyService.getResult(anyString())).thenReturn(Optional.empty());
+            when(carPlateMapper.selectByCommunityAndCarNumber(COMMUNITY_ID, CAR_NUMBER)).thenReturn(carPlate);
+            setupLockMock();
+            when(parkingSpaceCalculator.calculateAvailableSpaces(COMMUNITY_ID)).thenReturn(50);
+            when(visitorAuthorizationMapper.selectPendingActivation(COMMUNITY_ID, CAR_NUMBER)).thenReturn(null);
+            when(idempotencyService.checkAndSet(anyString(), anyString(), eq(300))).thenReturn(true);
+
+            EntryResponse response = entryService.vehicleEntry(request);
+
+            assertNotNull(response);
+            assertEquals("visitor", response.getVehicleType());
+            // 验证未创建 visitor_session（再次入场由 TASK 10.8 处理）
+            verify(visitorSessionMapper, never()).insert(any());
+            // 验证创建了入场记录
+            verify(parkingCarRecordMapper).insertToTable(anyString(), any());
         }
     }
 }

@@ -61,6 +61,14 @@
         WHERE id = #{id}
     </update>
 
+    <update id="updateActivation">
+        UPDATE visitor_authorization
+        SET status = #{status},
+            activation_time = #{activationTime},
+            update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
     <select id="selectExpiredPendingActivation" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM visitor_authorization

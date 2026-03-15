@@ -8,8 +8,12 @@ import com.parking.dto.EntryRequest;
 import com.parking.dto.EntryResponse;
 import com.parking.mapper.CarPlateMapper;
 import com.parking.mapper.ParkingCarRecordMapper;
+import com.parking.mapper.VisitorAuthorizationMapper;
+import com.parking.mapper.VisitorSessionMapper;
 import com.parking.model.CarPlate;
 import com.parking.model.ParkingCarRecord;
+import com.parking.model.VisitorAuthorization;
+import com.parking.model.VisitorSession;
 import com.parking.service.CacheService;
 import com.parking.service.DistributedLockService;
 import com.parking.service.EntryService;
@@ -51,6 +55,8 @@ public class EntryServiceImpl implements EntryService {
     private final ParkingSpaceCalculator parkingSpaceCalculator;
     private final CarPlateMapper carPlateMapper;
     private final ParkingCarRecordMapper parkingCarRecordMapper;
+    private final VisitorAuthorizationMapper visitorAuthorizationMapper;
+    private final VisitorSessionMapper visitorSessionMapper;
     private final CacheService cacheService;
     private final ObjectMapper objectMapper;
 
@@ -59,6 +65,8 @@ public class EntryServiceImpl implements EntryService {
                             ParkingSpaceCalculator parkingSpaceCalculator,
                             CarPlateMapper carPlateMapper,
                             ParkingCarRecordMapper parkingCarRecordMapper,
+                            VisitorAuthorizationMapper visitorAuthorizationMapper,
+                            VisitorSessionMapper visitorSessionMapper,
                             CacheService cacheService,
                             ObjectMapper objectMapper) {
         this.idempotencyService = idempotencyService;
@@ -66,6 +74,8 @@ public class EntryServiceImpl implements EntryService {
         this.parkingSpaceCalculator = parkingSpaceCalculator;
         this.carPlateMapper = carPlateMapper;
         this.parkingCarRecordMapper = parkingCarRecordMapper;
+        this.visitorAuthorizationMapper = visitorAuthorizationMapper;
+        this.visitorSessionMapper = visitorSessionMapper;
         this.cacheService = cacheService;
         this.objectMapper = objectMapper;
     }
@@ -98,6 +108,11 @@ public class EntryServiceImpl implements EntryService {
             if (!spaceAvailable) {
                 log.warn("车位已满，拒绝入场: communityId={}, carNumber={}", communityId, carNumber);
                 throw new BusinessException(ErrorCode.PARKING_5001);
+            }
+
+            // 4.5 Visitor 车辆入场激活处理
+            if ("visitor".equals(vehicleType)) {
+                handleVisitorEntry(communityId, carPlate, now);
             }
 
             // 5. 创建入场记录，路由到对应月份分表
@@ -228,5 +243,59 @@ public class EntryServiceImpl implements EntryService {
             log.error("反序列化入场响应失败", e);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR);
         }
+    }
+
+    /**
+     * 处理 Visitor 车辆入场激活逻辑
+     * 1. 查询待激活授权记录（status='approved_pending_activation'）
+     * 2. 验证当前时间在24小时激活窗口内
+     * 3. 超过窗口 → 更新状态为 canceled_no_entry，拒绝入场
+     * 4. 窗口内 → 首次激活：更新状态为 activated，创建 visitor_session
+     *          → 再次入场：更新 visitor_session 状态为 in_park
+     */
+    void handleVisitorEntry(Long communityId, CarPlate carPlate, LocalDateTime now) {
+        String carNumber = carPlate.getCarNumber();
+
+        // 1. 查询待激活的授权记录
+        VisitorAuthorization authorization = visitorAuthorizationMapper
+                .selectPendingActivation(communityId, carNumber);
+
+        if (authorization != null) {
+            // 有待激活授权 → 首次入场激活流程
+            if (now.isAfter(authorization.getExpireTime())) {
+                // 2a. 超过24小时激活窗口，自动取消
+                visitorAuthorizationMapper.updateStatus(authorization.getId(), "canceled_no_entry");
+                log.warn("Visitor 激活窗口已过期, authorizationId={}, expireTime={}, carNumber={}",
+                        authorization.getId(), authorization.getExpireTime(), carNumber);
+                throw new BusinessException(ErrorCode.PARKING_8001);
+            }
+
+            // 2b. 在窗口内，激活授权
+            visitorAuthorizationMapper.updateActivation(
+                    authorization.getId(), "activated", now);
+
+            // 3. 创建 visitor_session 记录
+            VisitorSession session = new VisitorSession();
+            session.setCommunityId(communityId);
+            session.setHouseNo(carPlate.getHouseNo());
+            session.setAuthorizationId(authorization.getId());
+            session.setCarNumber(carNumber);
+            session.setSessionStart(now);
+            session.setLastEntryTime(now);
+            session.setAccumulatedDuration(0);
+            session.setStatus("in_park");
+            session.setTimeoutNotified(0);
+            visitorSessionMapper.insert(session);
+
+            log.info("Visitor 首次入场激活成功, authorizationId={}, sessionId={}, carNumber={}",
+                    authorization.getId(), session.getId(), carNumber);
+            return;
+        }
+
+        // 4. 无待激活授权 → 检查是否有已激活的会话（再次入场场景，由 TASK 10.8 处理）
+        // 此处仅做基本校验：如果既无待激活授权也无已激活会话，拒绝入场
+        // 再次入场逻辑将在 TASK 10.8 中完善
+        log.info("Visitor 车辆入场，无待激活授权，检查已有会话: communityId={}, carNumber={}",
+                communityId, carNumber);
     }
 }

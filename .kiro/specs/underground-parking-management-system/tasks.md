@@ -489,7 +489,7 @@
     - 测试幂等性保护
     - _Requirements: 7.5, 7.6, 7.7, 7.10_
 
-  - [ ] 10.6 实现 Visitor 首次入场激活逻辑
+  - [-] 10.6 实现 Visitor 首次入场激活逻辑
     - 在 EntryService 中添加 Visitor 入场处理
     - 查询授权记录 (status='approved_pending_activation')
     - 验证当前时间在24小时激活窗口内

@@ -34,6 +34,12 @@ public interface VisitorAuthorizationMapper {
     int updateStatus(@Param("id") Long id, @Param("status") String status);
 
     /**
+     * 更新授权为已激活状态，同时记录激活时间
+     */
+    int updateActivation(@Param("id") Long id, @Param("status") String status,
+                         @Param("activationTime") java.time.LocalDateTime activationTime);
+
+    /**
      * 查询已审批但超过激活窗口的授权（用于定时取消）
      */
     List<VisitorAuthorization> selectExpiredPendingActivation();

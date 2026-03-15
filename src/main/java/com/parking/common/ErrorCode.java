@@ -32,6 +32,9 @@ public enum ErrorCode {
     // 7xxx: Visitor 权限相关
     PARKING_7001(7001, "本月 Visitor 时长配额已用完（72小时），无法申请"),
 
+    // 8xxx: Visitor 入场激活相关
+    PARKING_8001(8001, "Visitor 激活窗口已过期，授权已自动取消"),
+
     // 9xxx: 车位配置相关
     PARKING_9001(9001, "Visitor 可开放车位不足，无法申请"),
     PARKING_9002(9002, "新车位数小于当前在场车辆数，无法修改"),

@@ -64,3 +64,5 @@
 [2026-03-15 11:45] TASK-10.1 - DONE - 实现 VisitorQuotaManager 接口及实现类，含 VisitorSessionMapper，11 个单元测试全部通过
 
 [2026-03-15 11:48] TASK-10.2 - DONE - 实现 Visitor 申请接口，含 VisitorService、VisitorController、Mapper 及 XML，6 个单元测试全部通过
+
+[2026-03-15 11:52] TASK-10.4 - DONE - 实现 Visitor 审批接口 POST /api/v1/visitors/{visitorId}/audit，含幂等键、行级锁、24小时激活窗口授权、驳回原因、订阅消息通知，6个单元测试全部通过
