@@ -26,7 +26,11 @@ Maven 3.x with `spring-boot-maven-plugin`.
 
 ### Common Commands
 
+以下命令均在 `parking-service/` 目录下执行：
+
 ```bash
+cd parking-service
+
 # Compile
 mvn compile
 
@@ -45,9 +49,9 @@ mvn clean install
 
 ## Configuration
 
-- Main config: `src/main/resources/application.yml`
-- Logging: `src/main/resources/logback-spring.xml` (includes `requestId` in MDC pattern)
-- MyBatis mapper XMLs: `src/main/resources/mapper/**/*.xml`
+- Main config: `parking-service/src/main/resources/application.yml`
+- Logging: `parking-service/src/main/resources/logback-spring.xml` (includes `requestId` in MDC pattern)
+- MyBatis mapper XMLs: `parking-service/src/main/resources/mapper/**/*.xml`
 - MyBatis maps `snake_case` DB columns to `camelCase` Java fields automatically
 
 ## Key Config Details
