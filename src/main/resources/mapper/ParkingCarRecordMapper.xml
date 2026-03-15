@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.parking.mapper.ParkingCarRecordMapper">
+
+    <!-- 插入入场记录到指定月份分表 -->
+    <insert id="insertToTable" useGeneratedKeys="true" keyProperty="record.id">
+        INSERT INTO ${tableName}
+            (community_id, house_no, car_number, vehicle_type,
+             enter_time, status, create_time, update_time)
+        VALUES
+            (#{record.communityId}, #{record.houseNo}, #{record.carNumber}, #{record.vehicleType},
+             #{record.enterTime}, #{record.status}, NOW(), NOW())
+    </insert>
+
+    <!-- 统计指定小区当前在场车辆数 -->
+    <select id="countEnteredByTable" resultType="int">
+        SELECT COUNT(*)
+        FROM ${tableName}
+        WHERE community_id = #{communityId}
+          AND status = 'entered'
+    </select>
+
+</mapper>

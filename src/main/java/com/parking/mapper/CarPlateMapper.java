@@ -86,6 +86,18 @@ public interface CarPlateMapper {
     int logicalDelete(@Param("id") Long id);
 
     /**
+     * 根据小区ID和车牌号查询车牌记录（未删除的）
+     * 用于入场时查询车牌信息
+     * Validates: Requirements 5.5
+     *
+     * @param communityId 小区ID
+     * @param carNumber   车牌号
+     * @return 车牌实体，不存在则返回 null
+     */
+    CarPlate selectByCommunityAndCarNumber(@Param("communityId") Long communityId,
+                                           @Param("carNumber") String carNumber);
+
+    /**
      * 查询指定 Data_Domain（community_id + house_no）下所有未删除车牌
      * 支持同房屋号多业主场景，返回该房屋号下所有业主的车牌
      * Validates: Requirements 11.1, 11.5
