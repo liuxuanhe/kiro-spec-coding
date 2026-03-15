@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.parking.mapper.IpWhitelistMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_ip_whitelist (community_id, ip_address, ip_range, operation_type,
+                                      description, status, create_admin_id, create_time, is_deleted)
+        VALUES (#{communityId}, #{ipAddress}, #{ipRange}, #{operationType},
+                #{description}, #{status}, #{createAdminId}, #{createTime}, 0)
+    </insert>
+
+    <select id="selectById" resultType="com.parking.model.IpWhitelist">
+        SELECT id, community_id, ip_address, ip_range, operation_type,
+               description, status, create_admin_id, create_time, update_time
+        FROM sys_ip_whitelist
+        WHERE id = #{id} AND is_deleted = 0
+    </select>
+
+    <select id="selectByOperation" resultType="com.parking.model.IpWhitelist">
+        SELECT id, community_id, ip_address, ip_range, operation_type,
+               description, status, create_admin_id, create_time
+        FROM sys_ip_whitelist
+        WHERE operation_type = #{operationType} AND status = 'active' AND is_deleted = 0
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectAll" resultType="com.parking.model.IpWhitelist">
+        SELECT id, community_id, ip_address, ip_range, operation_type,
+               description, status, create_admin_id, create_time
+        FROM sys_ip_whitelist
+        WHERE is_deleted = 0
+        ORDER BY create_time DESC
+    </select>
+
+    <update id="logicalDelete">
+        UPDATE sys_ip_whitelist
+        SET is_deleted = 1, deleted_time = NOW()
+        WHERE id = #{id} AND is_deleted = 0
+    </update>
+
+</mapper>
