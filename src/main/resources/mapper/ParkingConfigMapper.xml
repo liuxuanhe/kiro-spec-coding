@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.parking.mapper.ParkingConfigMapper">
+
+    <!-- 根据小区ID查询停车场配置 -->
+    <select id="selectByCommunityId" resultType="com.parking.model.ParkingConfig">
+        SELECT id, community_id, total_spaces, reserved_spaces,
+               visitor_quota_hours, visitor_single_duration_hours,
+               visitor_activation_window_hours, zombie_vehicle_threshold_days,
+               version, create_time, update_time
+        FROM parking_config
+        WHERE community_id = #{communityId}
+    </select>
+
+    <!-- 使用乐观锁更新停车场配置，version 匹配时才更新，version 自动 +1 -->
+    <update id="updateByOptimisticLock">
+        UPDATE parking_config
+        SET total_spaces = #{totalSpaces},
+            reserved_spaces = #{reservedSpaces},
+            visitor_quota_hours = #{visitorQuotaHours},
+            visitor_single_duration_hours = #{visitorSingleDurationHours},
+            visitor_activation_window_hours = #{visitorActivationWindowHours},
+            zombie_vehicle_threshold_days = #{zombieVehicleThresholdDays},
+            version = version + 1,
+            update_time = NOW()
+        WHERE id = #{id}
+          AND version = #{version}
+    </update>
+
+    <!-- 统计指定小区当前在场车辆数 -->
+    <!-- 简化实现：查询 sys_car_plate 中活跃车牌数，后续入场模块完善后改为查询 parking_car_record 分表 -->
+    <select id="countEnteredVehicles" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_car_plate
+        WHERE community_id = #{communityId}
+          AND status IN ('normal', 'primary')
+          AND is_deleted = 0
+    </select>
+
+</mapper>
