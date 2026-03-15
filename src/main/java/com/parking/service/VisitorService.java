@@ -3,6 +3,7 @@ package com.parking.service;
 import com.parking.dto.VisitorApplyRequest;
 import com.parking.dto.VisitorApplyResponse;
 import com.parking.dto.VisitorAuditRequest;
+import com.parking.dto.VisitorQueryResponse;
 
 /**
  * Visitor 权限服务接口
@@ -32,4 +33,13 @@ public interface VisitorService {
      * @param communityId 小区ID
      */
     void audit(Long visitorId, VisitorAuditRequest request, Long adminId, Long communityId);
+
+    /**
+     * 查询指定房屋号下所有 Visitor 申请和授权
+     *
+     * @param communityId 小区ID
+     * @param houseNo     房屋号
+     * @return Visitor 查询响应列表
+     */
+    java.util.List<VisitorQueryResponse> listVisitors(Long communityId, String houseNo);
 }

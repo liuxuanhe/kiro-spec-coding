@@ -4,11 +4,13 @@ import com.parking.common.BusinessException;
 import com.parking.dto.VisitorApplyRequest;
 import com.parking.dto.VisitorApplyResponse;
 import com.parking.dto.VisitorAuditRequest;
+import com.parking.dto.VisitorQueryResponse;
 import com.parking.mapper.CarPlateMapper;
 import com.parking.mapper.VisitorApplicationMapper;
 import com.parking.mapper.VisitorAuthorizationMapper;
 import com.parking.model.CarPlate;
 import com.parking.model.VisitorApplication;
+import com.parking.model.VisitorAuthorization;
 import com.parking.service.impl.VisitorServiceImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,6 +18,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -35,10 +41,16 @@ class VisitorServiceTest {
     private VisitorApplicationMapper visitorApplicationMapper;
 
     @Mock
+    private VisitorAuthorizationMapper visitorAuthorizationMapper;
+
+    @Mock
     private VisitorQuotaManager visitorQuotaManager;
 
     @Mock
     private ParkingSpaceCalculator parkingSpaceCalculator;
+
+    @Mock
+    private MaskingService maskingService;
 
     @InjectMocks
     private VisitorServiceImpl visitorService;
@@ -164,5 +176,76 @@ class VisitorServiceTest {
 
         assertEquals(9001, ex.getCode()); // PARKING_9001
         verify(visitorApplicationMapper, never()).insert(any());
+    }
+
+    // ========== listVisitors 测试 ==========
+
+    @Test
+    @DisplayName("查询成功 - 返回申请和授权关联数据并脱敏")
+    void listVisitors_shouldReturnApplicationsWithAuthorizations() {
+        VisitorApplication app = new VisitorApplication();
+        app.setId(1L);
+        app.setCarNumber("京A12345");
+        app.setApplyReason("临时访客");
+        app.setStatus("approved_pending_activation");
+        app.setCreateTime(LocalDateTime.of(2026, 3, 15, 10, 0));
+
+        VisitorAuthorization auth = new VisitorAuthorization();
+        auth.setId(10L);
+        auth.setApplicationId(1L);
+        auth.setStatus("approved_pending_activation");
+        auth.setStartTime(LocalDateTime.of(2026, 3, 15, 10, 0));
+        auth.setExpireTime(LocalDateTime.of(2026, 3, 16, 10, 0));
+
+        when(visitorApplicationMapper.selectByHouse(COMMUNITY_ID, HOUSE_NO)).thenReturn(List.of(app));
+        when(visitorAuthorizationMapper.selectByHouse(COMMUNITY_ID, HOUSE_NO)).thenReturn(List.of(auth));
+        when(maskingService.mask("京A12345", 2, 2)).thenReturn("京A***45");
+
+        List<VisitorQueryResponse> result = visitorService.listVisitors(COMMUNITY_ID, HOUSE_NO);
+
+        assertEquals(1, result.size());
+        VisitorQueryResponse resp = result.get(0);
+        assertEquals(1L, resp.getApplicationId());
+        assertEquals("京A***45", resp.getCarNumber());
+        assertEquals("临时访客", resp.getApplyReason());
+        assertEquals("approved_pending_activation", resp.getApplicationStatus());
+        assertEquals(10L, resp.getAuthorizationId());
+        assertEquals("approved_pending_activation", resp.getAuthorizationStatus());
+        assertNotNull(resp.getStartTime());
+        assertNotNull(resp.getExpireTime());
+    }
+
+    @Test
+    @DisplayName("查询成功 - 无授权记录时授权字段为空")
+    void listVisitors_shouldReturnNullAuthorizationWhenNoAuth() {
+        VisitorApplication app = new VisitorApplication();
+        app.setId(2L);
+        app.setCarNumber("京B67890");
+        app.setApplyReason("朋友来访");
+        app.setStatus("submitted");
+        app.setCreateTime(LocalDateTime.of(2026, 3, 15, 11, 0));
+
+        when(visitorApplicationMapper.selectByHouse(COMMUNITY_ID, HOUSE_NO)).thenReturn(List.of(app));
+        when(visitorAuthorizationMapper.selectByHouse(COMMUNITY_ID, HOUSE_NO)).thenReturn(Collections.emptyList());
+        when(maskingService.mask("京B67890", 2, 2)).thenReturn("京B***90");
+
+        List<VisitorQueryResponse> result = visitorService.listVisitors(COMMUNITY_ID, HOUSE_NO);
+
+        assertEquals(1, result.size());
+        VisitorQueryResponse resp = result.get(0);
+        assertEquals("submitted", resp.getApplicationStatus());
+        assertNull(resp.getAuthorizationId());
+        assertNull(resp.getAuthorizationStatus());
+    }
+
+    @Test
+    @DisplayName("查询成功 - 无申请记录时返回空列表")
+    void listVisitors_shouldReturnEmptyListWhenNoApplications() {
+        when(visitorApplicationMapper.selectByHouse(COMMUNITY_ID, HOUSE_NO)).thenReturn(Collections.emptyList());
+        when(visitorAuthorizationMapper.selectByHouse(COMMUNITY_ID, HOUSE_NO)).thenReturn(Collections.emptyList());
+
+        List<VisitorQueryResponse> result = visitorService.listVisitors(COMMUNITY_ID, HOUSE_NO);
+
+        assertTrue(result.isEmpty());
     }
 }

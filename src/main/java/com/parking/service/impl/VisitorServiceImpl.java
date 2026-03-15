@@ -6,6 +6,7 @@ import com.parking.common.RequestContext;
 import com.parking.dto.VisitorApplyRequest;
 import com.parking.dto.VisitorApplyResponse;
 import com.parking.dto.VisitorAuditRequest;
+import com.parking.dto.VisitorQueryResponse;
 import com.parking.mapper.CarPlateMapper;
 import com.parking.mapper.VisitorApplicationMapper;
 import com.parking.mapper.VisitorAuthorizationMapper;
@@ -13,6 +14,7 @@ import com.parking.model.CarPlate;
 import com.parking.model.VisitorApplication;
 import com.parking.model.VisitorAuthorization;
 import com.parking.service.IdempotencyService;
+import com.parking.service.MaskingService;
 import com.parking.service.NotificationService;
 import com.parking.service.ParkingSpaceCalculator;
 import com.parking.service.VisitorQuotaManager;
@@ -23,6 +25,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,6 +44,7 @@ public class VisitorServiceImpl implements VisitorService {
     private final VisitorQuotaManager visitorQuotaManager;
     private final ParkingSpaceCalculator parkingSpaceCalculator;
     private final IdempotencyService idempotencyService;
+    private final MaskingService maskingService;
     private final NotificationService notificationService;
 
     @Override
@@ -151,5 +156,46 @@ public class VisitorServiceImpl implements VisitorService {
         } catch (Exception e) {
             log.warn("Visitor 审批通知发送失败, visitorId={}", visitorId, e);
         }
+    }
+
+    @Override
+    public List<VisitorQueryResponse> listVisitors(Long communityId, String houseNo) {
+        // 1. 查询申请列表
+        List<VisitorApplication> applications = visitorApplicationMapper.selectByHouse(communityId, houseNo);
+        // 2. 查询授权列表
+        List<VisitorAuthorization> authorizations = visitorAuthorizationMapper.selectByHouse(communityId, houseNo);
+
+        // 3. 构建以 applicationId 为键的授权映射
+        Map<Long, VisitorAuthorization> authMap = new java.util.HashMap<>();
+        for (VisitorAuthorization auth : authorizations) {
+            authMap.put(auth.getApplicationId(), auth);
+        }
+
+        // 4. 组装响应并执行数据脱敏
+        List<VisitorQueryResponse> result = new ArrayList<>();
+        for (VisitorApplication app : applications) {
+            VisitorQueryResponse resp = new VisitorQueryResponse();
+            resp.setApplicationId(app.getId());
+            resp.setCarNumber(maskingService.mask(app.getCarNumber(), 2, 2));
+            resp.setApplyReason(app.getApplyReason());
+            resp.setApplicationStatus(app.getStatus());
+            resp.setRejectReason(app.getRejectReason());
+            resp.setApplyTime(app.getCreateTime());
+
+            // 关联授权信息
+            VisitorAuthorization auth = authMap.get(app.getId());
+            if (auth != null) {
+                resp.setAuthorizationId(auth.getId());
+                resp.setAuthorizationStatus(auth.getStatus());
+                resp.setStartTime(auth.getStartTime());
+                resp.setExpireTime(auth.getExpireTime());
+                resp.setActivationTime(auth.getActivationTime());
+            }
+
+            result.add(resp);
+        }
+
+        log.info("查询 Visitor 权限列表, communityId={}, houseNo={}, 数量={}", communityId, houseNo, result.size());
+        return result;
     }
 }
