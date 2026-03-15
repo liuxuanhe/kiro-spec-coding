@@ -232,6 +232,9 @@ const passwordStrengthStatus = computed(() => {
 /** 临时保存登录时的密码，用于自动填充修改密码表单 */
 let tempLoginPassword = ''
 
+/** 临时保存登录响应数据，仅在 mustChangePassword=true 时使用 */
+let tempLoginData = null
+
 /** 处理登录提交 */
 async function handleLogin() {
   loginLoading.value = true
@@ -241,11 +244,9 @@ async function handleLogin() {
       password: loginForm.value.password
     })
 
-    // 保存登录信息到 store
-    authStore.setLoginInfo(data)
-
-    // 首次登录强制修改密码
+    // 首次登录强制修改密码：不写入 store，临时保存登录响应
     if (data.mustChangePassword) {
+      tempLoginData = data
       tempLoginPassword = loginForm.value.password
       changePwdForm.value.oldPassword = tempLoginPassword
       changePasswordVisible.value = true
@@ -253,7 +254,8 @@ async function handleLogin() {
       return
     }
 
-    // 正常登录成功，跳转到目标页面
+    // 非首次登录，正常流程：保存登录信息到 store 并跳转
+    authStore.setLoginInfo(data)
     message.success('登录成功')
     const redirect = route.query.redirect || '/'
     router.push(redirect)
@@ -267,6 +269,10 @@ async function handleLogin() {
 /** 处理修改密码提交 */
 async function handleChangePassword() {
   changePwdLoading.value = true
+
+  // 临时设置 token 以便 API 调用携带鉴权信息
+  authStore.setLoginInfo(tempLoginData)
+
   try {
     await changePassword({
       oldPassword: changePwdForm.value.oldPassword,
@@ -278,10 +284,12 @@ async function handleChangePassword() {
 
     // 清除登录态，要求用新密码重新登录
     authStore.logout()
+    tempLoginData = null
     loginForm.value.password = ''
     tempLoginPassword = ''
   } catch (err) {
-    // 错误已在 request.js 拦截器中统一提示
+    // 失败时也清除临时登录态
+    authStore.logout()
   } finally {
     changePwdLoading.value = false
   }
