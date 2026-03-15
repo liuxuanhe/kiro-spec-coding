@@ -3,6 +3,7 @@ package com.parking.service;
 import com.parking.dto.EntryTrendResponse;
 import com.parking.dto.PeakHoursResponse;
 import com.parking.dto.SpaceUsageResponse;
+import com.parking.dto.ZombieVehicleStatResponse;
 import com.parking.mapper.ParkingConfigMapper;
 import com.parking.mapper.ParkingStatDailyMapper;
 import com.parking.model.ParkingConfig;
@@ -319,6 +320,83 @@ class ReportServiceTest {
         stat.setStatDate(date);
         stat.setPeakHour(peakHour);
         stat.setPeakCount(peakCount);
+        return stat;
+    }
+
+    // ========== getZombieVehicleStat 测试 ==========
+
+    @Test
+    @DisplayName("僵尸车辆统计 - 缓存命中直接返回")
+    void getZombieVehicleStat_cacheHit() {
+        ZombieVehicleStatResponse cached = new ZombieVehicleStatResponse();
+        cached.setItems(Collections.emptyList());
+        when(cacheService.get(anyString())).thenReturn(Optional.of(cached));
+
+        ZombieVehicleStatResponse result = reportService.getZombieVehicleStat(COMMUNITY_ID, START_DATE, END_DATE);
+
+        assertSame(cached, result);
+        verify(parkingStatDailyMapper, never()).selectByDateRange(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("僵尸车辆统计 - 缓存未命中正常查询")
+    void getZombieVehicleStat_cacheMiss() {
+        when(cacheService.get(anyString())).thenReturn(Optional.empty());
+
+        ParkingStatDaily stat1 = buildStatWithZombie(LocalDate.of(2026, 1, 1), 3, 1);
+        ParkingStatDaily stat2 = buildStatWithZombie(LocalDate.of(2026, 1, 2), 5, 2);
+        when(parkingStatDailyMapper.selectByDateRange(COMMUNITY_ID, START_DATE, END_DATE))
+                .thenReturn(List.of(stat1, stat2));
+
+        ZombieVehicleStatResponse result = reportService.getZombieVehicleStat(COMMUNITY_ID, START_DATE, END_DATE);
+
+        assertNotNull(result);
+        assertEquals(2, result.getItems().size());
+        assertEquals(3, result.getItems().get(0).getZombieVehicleCount());
+        assertEquals(1, result.getItems().get(0).getExceptionExitCount());
+        assertEquals(5, result.getItems().get(1).getZombieVehicleCount());
+        assertEquals(2, result.getItems().get(1).getExceptionExitCount());
+
+        verify(cacheService).set(anyString(), eq(result), eq(1L), any());
+    }
+
+    @Test
+    @DisplayName("僵尸车辆统计 - null 字段转换为 0")
+    void getZombieVehicleStat_nullFields() {
+        when(cacheService.get(anyString())).thenReturn(Optional.empty());
+
+        ParkingStatDaily stat = new ParkingStatDaily();
+        stat.setStatDate(LocalDate.of(2026, 1, 1));
+        stat.setCommunityId(COMMUNITY_ID);
+        when(parkingStatDailyMapper.selectByDateRange(COMMUNITY_ID, START_DATE, END_DATE))
+                .thenReturn(List.of(stat));
+
+        ZombieVehicleStatResponse result = reportService.getZombieVehicleStat(COMMUNITY_ID, START_DATE, END_DATE);
+
+        assertEquals(1, result.getItems().size());
+        assertEquals(0, result.getItems().get(0).getZombieVehicleCount());
+        assertEquals(0, result.getItems().get(0).getExceptionExitCount());
+    }
+
+    @Test
+    @DisplayName("僵尸车辆统计 - 无数据返回空列表")
+    void getZombieVehicleStat_noData() {
+        when(cacheService.get(anyString())).thenReturn(Optional.empty());
+        when(parkingStatDailyMapper.selectByDateRange(COMMUNITY_ID, START_DATE, END_DATE))
+                .thenReturn(Collections.emptyList());
+
+        ZombieVehicleStatResponse result = reportService.getZombieVehicleStat(COMMUNITY_ID, START_DATE, END_DATE);
+
+        assertNotNull(result);
+        assertTrue(result.getItems().isEmpty());
+    }
+
+    private ParkingStatDaily buildStatWithZombie(LocalDate date, int zombieCount, int exceptionExitCount) {
+        ParkingStatDaily stat = new ParkingStatDaily();
+        stat.setCommunityId(COMMUNITY_ID);
+        stat.setStatDate(date);
+        stat.setZombieVehicleCount(zombieCount);
+        stat.setExceptionExitCount(exceptionExitCount);
         return stat;
     }
 }

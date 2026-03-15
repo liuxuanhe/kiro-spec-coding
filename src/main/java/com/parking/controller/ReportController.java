@@ -5,6 +5,7 @@ import com.parking.common.RequestContext;
 import com.parking.dto.EntryTrendResponse;
 import com.parking.dto.PeakHoursResponse;
 import com.parking.dto.SpaceUsageResponse;
+import com.parking.dto.ZombieVehicleStatResponse;
 import com.parking.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -83,6 +84,25 @@ public class ReportController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         log.info("查询峰值时段报表: communityId={}, {} ~ {}", communityId, startDate, endDate);
         PeakHoursResponse response = reportService.getPeakHours(communityId, startDate, endDate);
+        return ApiResponse.success(response, RequestContext.getRequestId());
+    }
+
+    /**
+     * 查询僵尸车辆统计报表
+     * GET /api/v1/reports/zombie-vehicles?communityId={}&startDate={}&endDate={}
+     *
+     * @param communityId 小区ID
+     * @param startDate   开始日期
+     * @param endDate     结束日期
+     * @return 僵尸车辆统计数据
+     */
+    @GetMapping("/zombie-vehicles")
+    public ApiResponse<ZombieVehicleStatResponse> getZombieVehicleStat(
+            @RequestParam Long communityId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        log.info("查询僵尸车辆统计报表: communityId={}, {} ~ {}", communityId, startDate, endDate);
+        ZombieVehicleStatResponse response = reportService.getZombieVehicleStat(communityId, startDate, endDate);
         return ApiResponse.success(response, RequestContext.getRequestId());
     }
 }

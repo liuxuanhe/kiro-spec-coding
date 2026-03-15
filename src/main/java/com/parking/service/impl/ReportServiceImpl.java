@@ -3,6 +3,7 @@ package com.parking.service.impl;
 import com.parking.dto.EntryTrendResponse;
 import com.parking.dto.PeakHoursResponse;
 import com.parking.dto.SpaceUsageResponse;
+import com.parking.dto.ZombieVehicleStatResponse;
 import com.parking.mapper.ParkingConfigMapper;
 import com.parking.mapper.ParkingStatDailyMapper;
 import com.parking.model.ParkingConfig;
@@ -182,6 +183,46 @@ public class ReportServiceImpl implements ReportService {
         item.setDate(stat.getStatDate());
         item.setPeakHour(stat.getPeakHour() != null ? stat.getPeakHour() : 0);
         item.setPeakCount(stat.getPeakCount() != null ? stat.getPeakCount() : 0);
+        return item;
+    }
+
+    @Override
+    public ZombieVehicleStatResponse getZombieVehicleStat(Long communityId, LocalDate startDate, LocalDate endDate) {
+        // 1. 尝试从缓存获取
+        String cacheKey = "report:zombie_stat:" + communityId + ":" + startDate + ":" + endDate;
+        Optional<Object> cached = cacheService.get(cacheKey);
+        if (cached.isPresent() && cached.get() instanceof ZombieVehicleStatResponse) {
+            log.debug("僵尸车辆统计报表命中缓存: communityId={}", communityId);
+            return (ZombieVehicleStatResponse) cached.get();
+        }
+
+        // 2. 从预聚合表查询
+        List<ParkingStatDaily> dailyStats = parkingStatDailyMapper.selectByDateRange(
+                communityId, startDate, endDate);
+
+        // 3. 转换为响应 DTO
+        ZombieVehicleStatResponse response = new ZombieVehicleStatResponse();
+        List<ZombieVehicleStatResponse.ZombieStatItem> items = dailyStats.stream()
+                .map(this::toZombieStatItem)
+                .collect(Collectors.toList());
+        response.setItems(items);
+
+        // 4. 写入缓存
+        cacheService.set(cacheKey, response, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
+
+        log.info("僵尸车辆统计报表查询完成: communityId={}, 日期范围={} ~ {}, 数据条数={}",
+                communityId, startDate, endDate, items.size());
+        return response;
+    }
+
+    /**
+     * 将预聚合实体转换为僵尸车辆统计项
+     */
+    private ZombieVehicleStatResponse.ZombieStatItem toZombieStatItem(ParkingStatDaily stat) {
+        ZombieVehicleStatResponse.ZombieStatItem item = new ZombieVehicleStatResponse.ZombieStatItem();
+        item.setDate(stat.getStatDate());
+        item.setZombieVehicleCount(stat.getZombieVehicleCount() != null ? stat.getZombieVehicleCount() : 0);
+        item.setExceptionExitCount(stat.getExceptionExitCount() != null ? stat.getExceptionExitCount() : 0);
         return item;
     }
 }

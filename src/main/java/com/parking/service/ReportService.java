@@ -3,6 +3,7 @@ package com.parking.service;
 import com.parking.dto.EntryTrendResponse;
 import com.parking.dto.PeakHoursResponse;
 import com.parking.dto.SpaceUsageResponse;
+import com.parking.dto.ZombieVehicleStatResponse;
 
 import java.time.LocalDate;
 
@@ -44,4 +45,15 @@ public interface ReportService {
      * @return 峰值时段数据
      */
     PeakHoursResponse getPeakHours(Long communityId, LocalDate startDate, LocalDate endDate);
+
+    /**
+     * 查询僵尸车辆统计报表
+     * 从 parking_stat_daily 预聚合表查询 zombie_vehicle_count 和 exception_exit_count
+     *
+     * @param communityId 小区ID
+     * @param startDate   开始日期
+     * @param endDate     结束日期
+     * @return 僵尸车辆统计数据
+     */
+    ZombieVehicleStatResponse getZombieVehicleStat(Long communityId, LocalDate startDate, LocalDate endDate);
 }
