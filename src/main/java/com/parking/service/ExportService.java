@@ -19,4 +19,9 @@ public interface ExportService {
      * 查询导出任务状态
      */
     ExportTask getExportTaskStatus(Long exportId);
+
+    /**
+     * 获取可下载的导出任务（验证文件未过期）
+     */
+    ExportTask getDownloadableTask(Long exportId);
 }

@@ -50,4 +50,16 @@ public class ExportController {
         }
         return ApiResponse.success(task, RequestContext.getRequestId());
     }
+
+    /**
+     * 下载导出文件
+     * GET /api/v1/exports/{exportId}/download
+     * 验证文件未过期后返回文件下载信息
+     */
+    @GetMapping("/{exportId}/download")
+    public ApiResponse<ExportTask> downloadExportFile(@PathVariable Long exportId) {
+        log.info("下载导出文件: exportId={}", exportId);
+        ExportTask task = exportService.getDownloadableTask(exportId);
+        return ApiResponse.success(task, RequestContext.getRequestId());
+    }
 }

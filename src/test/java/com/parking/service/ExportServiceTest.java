@@ -10,6 +10,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -87,5 +89,55 @@ class ExportServiceTest {
         ExportTask result = exportService.getExportTaskStatus(999L);
 
         assertNull(result);
+    }
+
+    @Test
+    @DisplayName("获取可下载任务 - 成功")
+    void getDownloadableTask_success() {
+        ExportTask task = new ExportTask();
+        task.setId(1L);
+        task.setStatus("completed");
+        task.setFileUrl("/exports/1.csv");
+        task.setExpireTime(LocalDateTime.now().plusHours(24));
+        when(exportTaskMapper.selectById(1L)).thenReturn(task);
+
+        ExportTask result = exportService.getDownloadableTask(1L);
+
+        assertNotNull(result);
+        assertEquals("/exports/1.csv", result.getFileUrl());
+    }
+
+    @Test
+    @DisplayName("获取可下载任务 - 任务不存在抛异常")
+    void getDownloadableTask_notFound() {
+        when(exportTaskMapper.selectById(999L)).thenReturn(null);
+
+        assertThrows(com.parking.common.BusinessException.class,
+                () -> exportService.getDownloadableTask(999L));
+    }
+
+    @Test
+    @DisplayName("获取可下载任务 - 未完成抛异常")
+    void getDownloadableTask_notCompleted() {
+        ExportTask task = new ExportTask();
+        task.setId(1L);
+        task.setStatus("processing");
+        when(exportTaskMapper.selectById(1L)).thenReturn(task);
+
+        assertThrows(com.parking.common.BusinessException.class,
+                () -> exportService.getDownloadableTask(1L));
+    }
+
+    @Test
+    @DisplayName("获取可下载任务 - 文件已过期抛异常")
+    void getDownloadableTask_expired() {
+        ExportTask task = new ExportTask();
+        task.setId(1L);
+        task.setStatus("completed");
+        task.setExpireTime(LocalDateTime.now().minusHours(1));
+        when(exportTaskMapper.selectById(1L)).thenReturn(task);
+
+        assertThrows(com.parking.common.BusinessException.class,
+                () -> exportService.getDownloadableTask(1L));
     }
 }

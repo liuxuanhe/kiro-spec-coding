@@ -51,4 +51,19 @@ public class ExportServiceImpl implements ExportService {
     public ExportTask getExportTaskStatus(Long exportId) {
         return exportTaskMapper.selectById(exportId);
     }
+
+    @Override
+    public ExportTask getDownloadableTask(Long exportId) {
+        ExportTask task = exportTaskMapper.selectById(exportId);
+        if (task == null) {
+            throw new com.parking.common.BusinessException(com.parking.common.ErrorCode.PARAM_ERROR);
+        }
+        if (!"completed".equals(task.getStatus())) {
+            throw new com.parking.common.BusinessException(com.parking.common.ErrorCode.PARAM_ERROR);
+        }
+        if (task.getExpireTime() != null && task.getExpireTime().isBefore(LocalDateTime.now())) {
+            throw new com.parking.common.BusinessException(com.parking.common.ErrorCode.PARAM_ERROR);
+        }
+        return task;
+    }
 }
