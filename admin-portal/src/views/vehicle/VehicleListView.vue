@@ -60,7 +60,7 @@
     <!-- 车辆详情抽屉 -->
     <a-drawer
       title="车辆详情"
-      :open="drawerVisible"
+      :visible="drawerVisible"
       :width="400"
       @close="drawerVisible = false"
     >

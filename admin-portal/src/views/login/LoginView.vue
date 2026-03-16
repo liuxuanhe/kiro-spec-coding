@@ -49,7 +49,7 @@
 
     <!-- 首次登录强制修改密码对话框 -->
     <a-modal
-      v-model:open="changePasswordVisible"
+      v-model:visible="changePasswordVisible"
       title="首次登录 — 请修改初始密码"
       :closable="false"
       :maskClosable="false"
@@ -241,11 +241,10 @@ async function handleLogin() {
       password: loginForm.value.password
     })
 
-    // 保存登录信息到 store
-    authStore.setLoginInfo(data)
-
-    // 首次登录强制修改密码
+    // 首次登录强制修改密码：保存登录信息但标记需要修改密码
     if (data.mustChangePassword) {
+      authStore.setLoginInfo(data)
+      authStore.mustChangePassword = true
       tempLoginPassword = loginForm.value.password
       changePwdForm.value.oldPassword = tempLoginPassword
       changePasswordVisible.value = true
@@ -253,7 +252,8 @@ async function handleLogin() {
       return
     }
 
-    // 正常登录成功，跳转到目标页面
+    // 非首次登录，正常流程：保存登录信息到 store 并跳转
+    authStore.setLoginInfo(data)
     message.success('登录成功')
     const redirect = route.query.redirect || '/'
     router.push(redirect)

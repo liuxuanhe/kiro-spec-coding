@@ -13,6 +13,9 @@ export const useAuthStore = defineStore('auth', () => {
   const communityId = ref(Number(localStorage.getItem('communityId')) || null)
   const adminId = ref(Number(localStorage.getItem('adminId')) || null)
 
+  /** 是否需要强制修改密码（首次登录） */
+  const mustChangePassword = ref(false)
+
   /** 是否已登录 */
   const isLoggedIn = computed(() => !!accessToken.value)
 
@@ -41,6 +44,7 @@ export const useAuthStore = defineStore('auth', () => {
     role.value = ''
     communityId.value = null
     adminId.value = null
+    mustChangePassword.value = false
 
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
@@ -55,6 +59,7 @@ export const useAuthStore = defineStore('auth', () => {
     role,
     communityId,
     adminId,
+    mustChangePassword,
     isLoggedIn,
     setLoginInfo,
     logout

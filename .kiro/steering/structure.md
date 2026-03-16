@@ -1,7 +1,7 @@
 # 项目结构
 
 ```
-src/main/java/com/parking/
+parking-service/src/main/java/com/parking/
 ├── ParkingApplication.java          # 入口（@SpringBootApplication, @EnableScheduling）
 ├── common/                          # 共享工具类与基础类型
 │   ├── ApiResponse.java             # 统一响应封装 {code, message, data, requestId}
@@ -21,12 +21,12 @@ src/main/java/com/parking/
 ├── service/                         # 业务逻辑层（待创建）
 └── controller/                      # REST 控制器（待创建）
 
-src/main/resources/
+parking-service/src/main/resources/
 ├── application.yml                  # 应用配置
 ├── logback-spring.xml               # 日志配置，pattern 中包含 requestId
 └── mapper/                          # MyBatis XML 映射文件
 
-src/test/java/com/parking/          # 测试类，镜像主源码结构
+parking-service/src/test/java/com/parking/          # 测试类，镜像主源码结构
 ```
 
 ## 架构模式

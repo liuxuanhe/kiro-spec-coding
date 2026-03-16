@@ -59,7 +59,7 @@ docker compose down -v
 mysql -u root -p -e "CREATE DATABASE parking_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 # 执行建表脚本
-mysql -u root -p parking_db < src/main/resources/sql/schema.sql
+mysql -u root -p parking_db < parking-service/src/main/resources/sql/schema.sql
 ```
 
 ### 3.2 安装并启动 Redis
@@ -78,6 +78,7 @@ sudo systemctl start redis
 
 ```bash
 # 编译并打包（跳过测试）
+cd parking-service
 mvn clean package -DskipTests
 
 # 运行测试
@@ -87,7 +88,7 @@ mvn test
 ### 3.4 启动应用
 
 ```bash
-java -jar target/underground-parking-management-1.0.0-SNAPSHOT.jar \
+java -jar parking-service/target/underground-parking-management-1.0.0-SNAPSHOT.jar \
   --spring.datasource.url="jdbc:mysql://localhost:3306/parking_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true" \
   --spring.datasource.username=root \
   --spring.datasource.password=your_password \
@@ -103,7 +104,7 @@ export SPRING_DATASOURCE_USERNAME=root
 export SPRING_DATASOURCE_PASSWORD=your_password
 export SPRING_DATA_REDIS_HOST=localhost
 
-java -jar target/underground-parking-management-1.0.0-SNAPSHOT.jar
+java -jar parking-service/target/underground-parking-management-1.0.0-SNAPSHOT.jar
 ```
 
 ## 4. 环境变量说明
@@ -122,11 +123,11 @@ java -jar target/underground-parking-management-1.0.0-SNAPSHOT.jar
 
 ## 5. 数据库初始化
 
-建表脚本位于 `src/main/resources/sql/schema.sql`，包含所有核心表和索引。
+建表脚本位于 `parking-service/src/main/resources/sql/schema.sql`，包含所有核心表和索引。
 
 ```bash
 # 手动执行建表
-mysql -u root -p parking_db < src/main/resources/sql/schema.sql
+mysql -u root -p parking_db < parking-service/src/main/resources/sql/schema.sql
 ```
 
 Docker Compose 部署时会自动执行该脚本（挂载到 `/docker-entrypoint-initdb.d/`）。
