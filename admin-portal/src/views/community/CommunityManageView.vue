@@ -30,7 +30,7 @@
 
     <!-- 创建/编辑小区弹窗 -->
     <a-modal
-      v-model:open="modalVisible"
+      v-model:visible="modalVisible"
       :title="isEdit ? '编辑小区' : '创建小区'"
       :confirm-loading="submitLoading"
       @ok="handleSubmit"
