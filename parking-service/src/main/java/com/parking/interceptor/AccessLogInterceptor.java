@@ -1,6 +1,7 @@
 package com.parking.interceptor;
 
 import com.parking.common.RequestContext;
+import com.parking.interceptor.AuthenticationInterceptor;
 import com.parking.mapper.AccessLogMapper;
 import com.parking.model.AccessLog;
 import jakarta.servlet.http.HttpServletRequest;
@@ -52,17 +53,20 @@ public class AccessLogInterceptor implements HandlerInterceptor {
                 accessLog.setResponseTime((int) (System.currentTimeMillis() - startTime));
             }
 
-            // TODO: 从认证上下文获取用户信息
-            String userId = request.getHeader("X-Operator-Id");
-            if (userId != null) {
-                accessLog.setUserId(Long.parseLong(userId));
+            // 从认证拦截器设置的请求属性中获取用户信息
+            Object userIdAttr = request.getAttribute(AuthenticationInterceptor.ATTR_USER_ID);
+            if (userIdAttr != null) {
+                accessLog.setUserId((Long) userIdAttr);
             }
-            accessLog.setUserName(request.getHeader("X-Operator-Name"));
-            accessLog.setUserRole(request.getHeader("X-Operator-Role"));
-            String communityId = request.getHeader("X-Community-Id");
-            if (communityId != null) {
-                accessLog.setCommunityId(Long.parseLong(communityId));
+            Object userRoleAttr = request.getAttribute(AuthenticationInterceptor.ATTR_USER_ROLE);
+            if (userRoleAttr != null) {
+                accessLog.setUserRole((String) userRoleAttr);
             }
+            Object communityIdAttr = request.getAttribute(AuthenticationInterceptor.ATTR_COMMUNITY_ID);
+            if (communityIdAttr != null) {
+                accessLog.setCommunityId((Long) communityIdAttr);
+            }
+            // userName 暂时从 JWT 中无法获取，可后续扩展
 
             accessLogMapper.insert(accessLog);
         } catch (Exception e) {

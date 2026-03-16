@@ -3,6 +3,7 @@ package com.parking.aspect;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.parking.common.OperationLogAnnotation;
 import com.parking.common.RequestContext;
+import com.parking.interceptor.AuthenticationInterceptor;
 import com.parking.mapper.OperationLogMapper;
 import com.parking.model.OperationLog;
 import jakarta.servlet.http.HttpServletRequest;
@@ -90,18 +91,20 @@ public class OperationLogAspect {
             if (attrs != null) {
                 HttpServletRequest request = attrs.getRequest();
                 operationLog.setOperatorIp(getClientIp(request));
-                // TODO: 从认证上下文获取 operatorId/operatorName/operatorRole/communityId
-                // 当前使用请求头中的信息作为占位
-                String operatorId = request.getHeader("X-Operator-Id");
-                if (operatorId != null) {
-                    operationLog.setOperatorId(Long.parseLong(operatorId));
+                // 从认证拦截器设置的请求属性中获取用户信息
+                Object operatorIdAttr = request.getAttribute(AuthenticationInterceptor.ATTR_USER_ID);
+                if (operatorIdAttr != null) {
+                    operationLog.setOperatorId((Long) operatorIdAttr);
                 }
-                operationLog.setOperatorName(request.getHeader("X-Operator-Name"));
-                operationLog.setOperatorRole(request.getHeader("X-Operator-Role"));
-                String communityId = request.getHeader("X-Community-Id");
-                if (communityId != null) {
-                    operationLog.setCommunityId(Long.parseLong(communityId));
+                Object operatorRoleAttr = request.getAttribute(AuthenticationInterceptor.ATTR_USER_ROLE);
+                if (operatorRoleAttr != null) {
+                    operationLog.setOperatorRole((String) operatorRoleAttr);
                 }
+                Object communityIdAttr = request.getAttribute(AuthenticationInterceptor.ATTR_COMMUNITY_ID);
+                if (communityIdAttr != null) {
+                    operationLog.setCommunityId((Long) communityIdAttr);
+                }
+                // operatorName 暂时从 JWT 中无法获取，可后续扩展
             }
         } catch (Exception e) {
             log.warn("获取请求上下文信息失败", e);

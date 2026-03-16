@@ -1,5 +1,6 @@
 package com.parking.interceptor;
 
+import com.parking.interceptor.AuthenticationInterceptor;
 import com.parking.mapper.AccessLogMapper;
 import com.parking.model.AccessLog;
 import org.junit.jupiter.api.DisplayName;
@@ -47,10 +48,10 @@ class AccessLogInterceptorTest {
         request.setQueryString("communityId=1001");
         request.setAttribute("accessLog_startTime", System.currentTimeMillis() - 50);
         request.addHeader("User-Agent", "TestAgent/1.0");
-        request.addHeader("X-Operator-Id", "100");
-        request.addHeader("X-Operator-Name", "张三");
-        request.addHeader("X-Operator-Role", "property_admin");
-        request.addHeader("X-Community-Id", "1001");
+        // 模拟认证拦截器设置的请求属性
+        request.setAttribute(AuthenticationInterceptor.ATTR_USER_ID, 100L);
+        request.setAttribute(AuthenticationInterceptor.ATTR_USER_ROLE, "property_admin");
+        request.setAttribute(AuthenticationInterceptor.ATTR_COMMUNITY_ID, 1001L);
         MockHttpServletResponse response = new MockHttpServletResponse();
         response.setStatus(200);
 
@@ -65,7 +66,6 @@ class AccessLogInterceptorTest {
         assertEquals(200, log.getResponseCode());
         assertEquals("TestAgent/1.0", log.getUserAgent());
         assertEquals(100L, log.getUserId());
-        assertEquals("张三", log.getUserName());
         assertEquals("property_admin", log.getUserRole());
         assertEquals(1001L, log.getCommunityId());
         assertNotNull(log.getResponseTime());
