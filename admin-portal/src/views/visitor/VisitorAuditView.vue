@@ -75,7 +75,7 @@
 
     <!-- 驳回原因对话框 -->
     <a-modal
-      v-model:open="rejectModalVisible"
+      v-model:visible="rejectModalVisible"
       title="驳回 Visitor 申请"
       @ok="handleRejectConfirm"
       :confirmLoading="rejectLoading"
@@ -96,7 +96,7 @@
 
     <!-- 批量驳回原因对话框 -->
     <a-modal
-      v-model:open="batchRejectModalVisible"
+      v-model:visible="batchRejectModalVisible"
       title="批量驳回 Visitor 申请"
       @ok="handleBatchRejectConfirm"
       :confirmLoading="batchRejectLoading"

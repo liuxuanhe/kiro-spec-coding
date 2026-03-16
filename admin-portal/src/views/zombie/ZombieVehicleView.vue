@@ -52,7 +52,7 @@
 
     <!-- 处理对话框 -->
     <a-modal
-      v-model:open="handleModalVisible"
+      v-model:visible="handleModalVisible"
       title="处理僵尸车辆"
       @ok="handleConfirm"
       :confirmLoading="handleLoading"
