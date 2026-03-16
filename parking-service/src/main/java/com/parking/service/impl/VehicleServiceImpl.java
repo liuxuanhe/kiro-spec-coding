@@ -172,26 +172,7 @@ public class VehicleServiceImpl implements VehicleService {
         log.info("车牌查询数据库: communityId={}, houseNo={}, 数量={}", communityId, houseNo, carPlates.size());
 
         // 3. 构建响应并执行脱敏
-        List<VehicleQueryResponse.VehicleItem> items = new ArrayList<>();
-        for (CarPlate cp : carPlates) {
-            VehicleQueryResponse.VehicleItem item = new VehicleQueryResponse.VehicleItem();
-            item.setVehicleId(cp.getId());
-            item.setCarNumber(cp.getCarNumber());
-            item.setCarBrand(cp.getCarBrand());
-            item.setCarModel(cp.getCarModel());
-            item.setCarColor(cp.getCarColor());
-            item.setStatus(cp.getStatus());
-            item.setOwnerId(cp.getOwnerId());
-            item.setCreateTime(cp.getCreateTime());
-
-            // 查询业主手机号并脱敏（Requirements 17.1, 17.8）
-            Owner owner = ownerMapper.selectById(cp.getOwnerId());
-            if (owner != null && owner.getPhoneNumber() != null) {
-                item.setOwnerPhone(maskingService.maskPhoneNumber(owner.getPhoneNumber()));
-            }
-
-            items.add(item);
-        }
+        List<VehicleQueryResponse.VehicleItem> items = buildVehicleItems(carPlates);
 
         VehicleQueryResponse response = new VehicleQueryResponse();
         response.setVehicles(items);
@@ -202,6 +183,57 @@ public class VehicleServiceImpl implements VehicleService {
         log.debug("车牌查询结果已缓存: key={}, ttl={}分钟", cacheKey, VEHICLES_CACHE_TTL);
 
         return response;
+    }
+
+    @Override
+    public VehicleQueryResponse listVehicles(Long communityId, String houseNo, String carNumber, int page, int pageSize) {
+        // 1. 计算分页偏移量
+        int offset = (page - 1) * pageSize;
+
+        // 2. 查询总数
+        int total = carPlateMapper.countByCommunity(communityId, houseNo, carNumber);
+
+        // 3. 查询分页数据
+        List<CarPlate> carPlates = carPlateMapper.selectByCommunityWithPagination(
+                communityId, houseNo, carNumber, offset, pageSize);
+        log.info("车牌分页查询: communityId={}, houseNo={}, carNumber={}, page={}, pageSize={}, total={}",
+                communityId, houseNo, carNumber, page, pageSize, total);
+
+        // 4. 构建响应并执行脱敏
+        List<VehicleQueryResponse.VehicleItem> items = buildVehicleItems(carPlates);
+
+        VehicleQueryResponse response = new VehicleQueryResponse();
+        response.setRecords(items);
+        response.setTotal(total);
+        return response;
+    }
+
+    /**
+     * 将车牌实体列表转换为响应 DTO 列表，并执行脱敏
+     */
+    private List<VehicleQueryResponse.VehicleItem> buildVehicleItems(List<CarPlate> carPlates) {
+        List<VehicleQueryResponse.VehicleItem> items = new ArrayList<>();
+        for (CarPlate cp : carPlates) {
+            VehicleQueryResponse.VehicleItem item = new VehicleQueryResponse.VehicleItem();
+            item.setVehicleId(cp.getId());
+            item.setCarNumber(cp.getCarNumber());
+            item.setCarBrand(cp.getCarBrand());
+            item.setCarModel(cp.getCarModel());
+            item.setCarColor(cp.getCarColor());
+            item.setStatus(cp.getStatus());
+            item.setOwnerId(cp.getOwnerId());
+            item.setHouseNo(cp.getHouseNo());
+            item.setCreateTime(cp.getCreateTime());
+
+            // 查询业主手机号并脱敏（Requirements 17.1, 17.8）
+            Owner owner = ownerMapper.selectById(cp.getOwnerId());
+            if (owner != null && owner.getPhoneNumber() != null) {
+                item.setOwnerPhone(maskingService.maskPhoneNumber(owner.getPhoneNumber()));
+            }
+
+            items.add(item);
+        }
+        return items;
     }
 
     @Override

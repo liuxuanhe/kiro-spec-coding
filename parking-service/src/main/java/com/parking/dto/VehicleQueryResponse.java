@@ -14,8 +14,11 @@ import java.util.List;
 @Data
 public class VehicleQueryResponse {
 
-    /** 车牌列表 */
+    /** 车牌列表（业主端使用） */
     private List<VehicleItem> vehicles;
+
+    /** 车牌列表（管理端分页使用，与 vehicles 同结构） */
+    private List<VehicleItem> records;
 
     /** 总数量 */
     private int total;
@@ -45,6 +48,9 @@ public class VehicleQueryResponse {
 
         /** 业主ID */
         private Long ownerId;
+
+        /** 房屋号 */
+        private String houseNo;
 
         /** 业主手机号（已脱敏） */
         private String ownerPhone;

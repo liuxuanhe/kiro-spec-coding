@@ -68,21 +68,29 @@ public class VehicleController {
 
     /**
      * 查询车牌列表接口
-     * GET /api/v1/vehicles?communityId={communityId}&houseNo={houseNo}
-     * 返回指定 Data_Domain 下所有车牌，支持同房屋号多业主场景
+     * GET /api/v1/vehicles?communityId={communityId}&houseNo={houseNo}&carNumber={carNumber}&page=1&pageSize=10
+     * 物业管理员按 Community 维度查询，houseNo / carNumber 为可选筛选条件
+     * 业主端按 Data_Domain 维度查询时需传 houseNo
      * 使用 Redis 缓存（30分钟过期），对敏感信息执行脱敏处理
      * Validates: Requirements 11.1, 11.5
      *
      * @param communityId 小区ID
-     * @param houseNo 房屋号
+     * @param houseNo 房屋号（可选筛选）
+     * @param carNumber 车牌号（可选筛选）
+     * @param page 页码（默认1）
+     * @param pageSize 每页数量（默认10）
      * @return 车牌查询响应
      */
     @GetMapping
     public ApiResponse<VehicleQueryResponse> listVehicles(
             @RequestParam Long communityId,
-            @RequestParam String houseNo) {
-        log.info("车牌查询请求: communityId={}, houseNo={}", communityId, houseNo);
-        VehicleQueryResponse response = vehicleService.listVehicles(communityId, houseNo);
+            @RequestParam(required = false) String houseNo,
+            @RequestParam(required = false) String carNumber,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        log.info("车牌查询请求: communityId={}, houseNo={}, carNumber={}, page={}, pageSize={}",
+                communityId, houseNo, carNumber, page, pageSize);
+        VehicleQueryResponse response = vehicleService.listVehicles(communityId, houseNo, carNumber, page, pageSize);
         return ApiResponse.success(response, RequestContext.getRequestId());
     }
 

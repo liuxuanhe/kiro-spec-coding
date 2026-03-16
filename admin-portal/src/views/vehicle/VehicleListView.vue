@@ -34,7 +34,7 @@
       <template #bodyCell="{ column, record }">
         <!-- 品牌型号列 -->
         <template v-if="column.dataIndex === 'brandModel'">
-          {{ [record.brand, record.model].filter(Boolean).join(' ') || '—' }}
+          {{ [record.carBrand, record.carModel].filter(Boolean).join(' ') || '—' }}
         </template>
 
         <!-- 业主手机号列：脱敏显示 -->
@@ -66,9 +66,9 @@
     >
       <a-descriptions :column="1" bordered size="small" v-if="currentVehicle">
         <a-descriptions-item label="车牌号">{{ currentVehicle.carNumber }}</a-descriptions-item>
-        <a-descriptions-item label="品牌">{{ currentVehicle.brand || '—' }}</a-descriptions-item>
-        <a-descriptions-item label="型号">{{ currentVehicle.model || '—' }}</a-descriptions-item>
-        <a-descriptions-item label="颜色">{{ currentVehicle.color || '—' }}</a-descriptions-item>
+        <a-descriptions-item label="品牌">{{ currentVehicle.carBrand || '—' }}</a-descriptions-item>
+        <a-descriptions-item label="型号">{{ currentVehicle.carModel || '—' }}</a-descriptions-item>
+        <a-descriptions-item label="颜色">{{ currentVehicle.carColor || '—' }}</a-descriptions-item>
         <a-descriptions-item label="房屋号">{{ currentVehicle.houseNo }}</a-descriptions-item>
         <a-descriptions-item label="业主手机号">{{ maskPhone(currentVehicle.ownerPhone) }}</a-descriptions-item>
         <a-descriptions-item label="状态">
@@ -92,7 +92,7 @@ const authStore = useAuthStore()
 const columns = [
   { title: '车牌号', dataIndex: 'carNumber', width: 140 },
   { title: '品牌型号', dataIndex: 'brandModel', width: 140 },
-  { title: '颜色', dataIndex: 'color', width: 80 },
+  { title: '颜色', dataIndex: 'carColor', width: 80 },
   { title: '房屋号', dataIndex: 'houseNo', width: 120 },
   { title: '业主手机号', dataIndex: 'ownerPhone', width: 140 },
   { title: '状态', dataIndex: 'status', width: 100 },

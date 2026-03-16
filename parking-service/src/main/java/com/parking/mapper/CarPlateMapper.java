@@ -110,6 +110,36 @@ public interface CarPlateMapper {
                                  @Param("houseNo") String houseNo);
 
     /**
+     * 按小区分页查询车牌列表（支持可选筛选条件）
+     * 物业管理员按 Community 维度查询，houseNo / carNumber 为可选筛选条件
+     * Validates: Requirements 11.1, 11.5
+     *
+     * @param communityId 小区ID
+     * @param houseNo 房屋号（可选）
+     * @param carNumber 车牌号（可选，模糊匹配）
+     * @param offset 偏移量
+     * @param limit 每页数量
+     * @return 车牌列表
+     */
+    List<CarPlate> selectByCommunityWithPagination(@Param("communityId") Long communityId,
+                                                   @Param("houseNo") String houseNo,
+                                                   @Param("carNumber") String carNumber,
+                                                   @Param("offset") int offset,
+                                                   @Param("limit") int limit);
+
+    /**
+     * 统计小区内车牌总数（支持可选筛选条件）
+     *
+     * @param communityId 小区ID
+     * @param houseNo 房屋号（可选）
+     * @param carNumber 车牌号（可选，模糊匹配）
+     * @return 总数
+     */
+    int countByCommunity(@Param("communityId") Long communityId,
+                         @Param("houseNo") String houseNo,
+                         @Param("carNumber") String carNumber);
+
+    /**
      * 使用行级锁查询指定 Data_Domain 下所有未删除车牌（SELECT ... FOR UPDATE）
      * 用于 Primary 车辆切换时防止并发冲突
      * Validates: Requirements 4.10

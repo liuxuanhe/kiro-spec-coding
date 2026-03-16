@@ -98,6 +98,39 @@
         ORDER BY create_time ASC
     </select>
 
+    <!-- 按小区分页查询车牌列表（支持可选筛选条件） -->
+    <!-- 物业管理员按 Community 维度查询，houseNo / carNumber 为可选筛选条件 -->
+    <select id="selectByCommunityWithPagination" resultType="com.parking.model.CarPlate">
+        SELECT id, community_id, house_no, owner_id, car_number,
+               car_brand, car_model, car_color, status,
+               is_deleted, create_time, update_time, deleted_time
+        FROM sys_car_plate
+        WHERE community_id = #{communityId}
+          AND is_deleted = 0
+          <if test="houseNo != null and houseNo != ''">
+              AND house_no = #{houseNo}
+          </if>
+          <if test="carNumber != null and carNumber != ''">
+              AND car_number LIKE CONCAT('%', #{carNumber}, '%')
+          </if>
+        ORDER BY create_time DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <!-- 统计小区内车牌总数（支持可选筛选条件） -->
+    <select id="countByCommunity" resultType="int">
+        SELECT COUNT(*)
+        FROM sys_car_plate
+        WHERE community_id = #{communityId}
+          AND is_deleted = 0
+          <if test="houseNo != null and houseNo != ''">
+              AND house_no = #{houseNo}
+          </if>
+          <if test="carNumber != null and carNumber != ''">
+              AND car_number LIKE CONCAT('%', #{carNumber}, '%')
+          </if>
+    </select>
+
     <!-- 使用行级锁查询指定 Data_Domain 下所有未删除车牌（SELECT ... FOR UPDATE） -->
     <!-- 用于 Primary 车辆切换时防止并发冲突 -->
     <!-- Validates: Requirements 4.10 -->

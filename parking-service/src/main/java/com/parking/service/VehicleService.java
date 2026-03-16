@@ -29,7 +29,22 @@ public interface VehicleService {
     void deleteVehicle(Long vehicleId);
 
     /**
-     * 查询车牌列表
+     * 查询车牌列表（支持分页和可选筛选）
+     * 物业管理员按 Community 维度查询，houseNo / carNumber 为可选筛选条件
+     * 使用 Redis 缓存（30分钟过期），对敏感信息执行脱敏处理
+     * Validates: Requirements 11.1, 11.5
+     *
+     * @param communityId 小区ID
+     * @param houseNo 房屋号（可选）
+     * @param carNumber 车牌号（可选）
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @return 车牌查询响应
+     */
+    VehicleQueryResponse listVehicles(Long communityId, String houseNo, String carNumber, int page, int pageSize);
+
+    /**
+     * 查询车牌列表（按 Data_Domain 查询，业主端使用）
      * 根据 Data_Domain（community_id + house_no）查询所有未删除车牌
      * 支持同房屋号多业主场景，返回该房屋号下所有业主的车牌
      * 使用 Redis 缓存（30分钟过期），对敏感信息执行脱敏处理
