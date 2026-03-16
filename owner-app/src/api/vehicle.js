@@ -1,14 +1,16 @@
 /**
  * 车牌管理相关 API
  */
-import { get, post, del } from '@/utils/request'
+import { get, post, put, del } from '@/utils/request'
+import { getOwnerParams } from '@/utils/user'
 
-/** 查询车牌列表 */
+/** 查询车牌列表（自动附加 communityId、houseNo） */
 export function getVehicleList() {
-  return get('/vehicles')
+  const { communityId, houseNo } = getOwnerParams()
+  return get('/vehicles', { communityId, houseNo })
 }
 
-/** 添加车牌 */
+/** 添加车牌（自动附加 communityId、houseNo、ownerId） */
 export function addVehicle(data) {
   return post('/vehicles', data)
 }
@@ -18,7 +20,8 @@ export function deleteVehicle(vehicleId) {
   return del(`/vehicles/${vehicleId}`)
 }
 
-/** 设置 Primary 车辆 */
+/** 设置 Primary 车辆（自动附加 communityId、houseNo） */
 export function setPrimary(vehicleId, data) {
-  return post(`/vehicles/${vehicleId}/primary`, data)
+  const { communityId, houseNo } = getOwnerParams()
+  return put(`/vehicles/${vehicleId}/primary`, { ...data, communityId, houseNo })
 }

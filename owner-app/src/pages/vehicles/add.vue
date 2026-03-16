@@ -50,6 +50,7 @@
 
 <script>
 import { addVehicle } from '@/api/vehicle'
+import { getUserInfo } from '@/utils/user'
 
 export default {
   data() {
@@ -72,7 +73,14 @@ export default {
 
       this.loading = true
       try {
-        await addVehicle(this.form)
+        const user = getUserInfo()
+        const data = {
+          ...this.form,
+          communityId: user?.communityId,
+          houseNo: user?.houseNo,
+          ownerId: user?.ownerId
+        }
+        await addVehicle(data)
         uni.showToast({ title: '添加成功', icon: 'success' })
         setTimeout(() => {
           uni.navigateBack()
