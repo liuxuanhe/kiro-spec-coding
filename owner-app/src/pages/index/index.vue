@@ -53,7 +53,18 @@ export default {
       }
     },
     navigateTo(url) {
-      uni.navigateTo({ url })
+      // tabBar 页面必须使用 switchTab，否则会报 navigateTo:fail
+      const tabBarPages = [
+        '/pages/index/index',
+        '/pages/vehicles/list',
+        '/pages/records/list',
+        '/pages/quota/index'
+      ]
+      if (tabBarPages.includes(url)) {
+        uni.switchTab({ url })
+      } else {
+        uni.navigateTo({ url })
+      }
     },
     handleLogout() {
       uni.showModal({

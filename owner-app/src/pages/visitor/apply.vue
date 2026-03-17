@@ -17,10 +17,10 @@
     <view class="vehicle-list">
       <view
         v-for="item in normalVehicles"
-        :key="item.id"
+        :key="item.vehicleId"
         class="vehicle-item"
-        :class="{ selected: selectedVehicleId === item.id }"
-        @click="selectedVehicleId = item.id"
+        :class="{ selected: selectedVehicleId === item.vehicleId }"
+        @click="selectedVehicleId = item.vehicleId"
       >
         <text class="plate">{{ item.carNumber }}</text>
         <text v-if="selectedVehicleId === item.id" class="check">✓</text>
@@ -86,7 +86,8 @@ export default {
           getVehicleList(),
           getQuota()
         ])
-        this.vehicleList = vehicles || []
+        // 后端返回 { records: [...], total: N } 或 { vehicles: [...], total: N }
+        this.vehicleList = vehicles?.records || vehicles?.vehicles || []
         // 只显示普通车辆（非 Primary、非禁用、非删除）
         this.normalVehicles = this.vehicleList.filter(
           v => v.status === 'normal'
@@ -102,13 +103,13 @@ export default {
     async handleApply() {
       if (!this.selectedVehicleId) return
 
-      const selected = this.vehicleList.find(v => v.id === this.selectedVehicleId)
+      const selected = this.vehicleList.find(v => v.vehicleId === this.selectedVehicleId)
       this.submitting = true
       try {
         await applyVisitor({
-          vehicleId: this.selectedVehicleId,
+          carPlateId: this.selectedVehicleId,
           carNumber: selected.carNumber,
-          reason: this.reason
+          applyReason: this.reason
         })
         uni.showToast({ title: '申请已提交', icon: 'success' })
         setTimeout(() => {
